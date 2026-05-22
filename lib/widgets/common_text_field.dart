@@ -10,6 +10,7 @@ class CommonTextField extends StatelessWidget {
     this.maxLines = 1,
     this.hasError = false,
     this.suffixIcon,
+    this.enabled = true,
   });
 
   final TextEditingController controller;
@@ -19,11 +20,13 @@ class CommonTextField extends StatelessWidget {
   final int maxLines;
   final bool hasError;
   final Widget? suffixIcon;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      enabled: enabled,
       keyboardType: keyboardType,
       obscureText: obscureText,
       maxLines: obscureText ? 1 : maxLines,

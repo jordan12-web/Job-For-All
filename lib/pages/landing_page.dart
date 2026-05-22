@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/info_content.dart';
 import '../theme/app_colors.dart';
+import '../utils/debug_logger.dart';
 import '../widgets/about_section.dart';
 import '../widgets/contact_section.dart';
 import '../widgets/hero_section_premium.dart';
@@ -129,62 +130,88 @@ class _LandingPageState extends State<LandingPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: Column(
-        children: <Widget>[
-          TopNavBar(
-            isGuestMode: true,
-            guestSelectedSection: _activeSection,
-            onGuestNavigate: _onGuestNavigate,
-            onSignIn: () => _navigateTo(LoginPage.routeName),
-            onRegister: () => _navigateTo(SignupPage.routeName),
-          ),
-          Expanded(
-            child: Scrollbar(
-              controller: _scrollController,
-              thumbVisibility: true,
-              child: SingleChildScrollView(
+    try {
+      DebugLogger.page('LandingPage.build() - Building UI with sections');
+      return Scaffold(
+        backgroundColor: AppColors.surface,
+        body: Column(
+          children: <Widget>[
+            TopNavBar(
+              isGuestMode: true,
+              guestSelectedSection: _activeSection,
+              onGuestNavigate: _onGuestNavigate,
+              onSignIn: () => _navigateTo(LoginPage.routeName),
+              onRegister: () => _navigateTo(SignupPage.routeName),
+            ),
+            Expanded(
+              child: Scrollbar(
                 controller: _scrollController,
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    KeyedSubtree(
-                      key: _heroKey,
-                      child: PremiumHeroSection(
-                        onBrowseJobs: () => _scrollToKey(_jobsKey, 'jobs'),
-                        onGetStarted: () => _navigateTo(SignupPage.routeName),
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      KeyedSubtree(
+                        key: _heroKey,
+                        child: PremiumHeroSection(
+                          onBrowseJobs: () => _scrollToKey(_jobsKey, 'jobs'),
+                          onGetStarted: () => _navigateTo(SignupPage.routeName),
+                        ),
                       ),
-                    ),
-                    KeyedSubtree(
-                      key: _jobsKey,
-                      child: JobPreviewSection(
-                        onViewAllJobs: () => _navigateTo(JobListingPage.routeName),
+                      KeyedSubtree(
+                        key: _jobsKey,
+                        child: JobPreviewSection(
+                          onViewAllJobs: () => _navigateTo(JobListingPage.routeName),
+                        ),
                       ),
-                    ),
-                    KeyedSubtree(
-                      key: _aboutKey,
-                      child: const AboutSection(),
-                    ),
-                    KeyedSubtree(
-                      key: _howItWorksKey,
-                      child: const HowItWorksSection(),
-                    ),
-                    KeyedSubtree(
-                      key: _contactKey,
-                      child: const ContactSection(),
-                    ),
-                    LandingFooter(onLinkTap: _onFooterLink),
-                  ],
+                      KeyedSubtree(
+                        key: _aboutKey,
+                        child: const AboutSection(),
+                      ),
+                      KeyedSubtree(
+                        key: _howItWorksKey,
+                        child: const HowItWorksSection(),
+                      ),
+                      KeyedSubtree(
+                        key: _contactKey,
+                        child: const ContactSection(),
+                      ),
+                      LandingFooter(onLinkTap: _onFooterLink),
+                    ],
+                  ),
                 ),
               ),
             ),
+          ],
+        ),
+      );
+    } catch (e, stackTrace) {
+      DebugLogger.error('ERROR building LandingPage: $e', stackTrace);
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text('Error Building Landing Page'),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  e.toString(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        ),
+      );
+    }
   }
 }

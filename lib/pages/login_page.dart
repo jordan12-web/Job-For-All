@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../models/user_profile.dart';
+import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
-import '../utils/role_utils.dart';
 import '../widgets/auth_shell.dart';
 import '../widgets/common_button.dart';
 import '../widgets/common_text_field.dart';
 import '../widgets/validation_message.dart';
-import 'home_page.dart';
 import 'landing_page.dart';
 import 'signup_page.dart';
 
@@ -27,9 +27,9 @@ class _LoginPageState extends State<LoginPage> {
 
   String? _emailError;
   String? _passwordError;
+  String? _formError;
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _showStaffLogin = false;
 
   static final RegExp _emailPattern = RegExp(r'^[\w\.-]+@[\w\.-]+\.\w+$');
 
@@ -41,6 +41,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _showMessage(String message, {bool isError = false}) {
+    if (!mounted) {
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -71,6 +74,7 @@ class _LoginPageState extends State<LoginPage> {
     setState(() {
       _emailError = _validateEmail(_emailController.text.trim());
       _passwordError = _validatePassword(_passwordController.text);
+      _formError = null;
     });
     return _emailError == null && _passwordError == null;
   }
@@ -81,10 +85,12 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    setState(() => _isLoading = true);
-    await Future<void>.delayed(const Duration(milliseconds: 400));
+    setState(() {
+      _isLoading = true;
+      _formError = null;
+    });
 
-    final bool loggedIn = RoleUtils.loginUser(
+    final AuthResult result = await AuthService.instance.signIn(
       email: _emailController.text.trim(),
       password: _passwordController.text,
     );
@@ -95,28 +101,36 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => _isLoading = false);
 
-    if (!loggedIn) {
+    if (!result.success) {
+      setState(() => _formError = result.message ?? 'Login failed.');
+      _showMessage(result.message ?? 'Login failed.', isError: true);
+      return;
+    }
+
+    final UserProfile? profile = result.profile;
+    final String? routeName = result.routeName;
+
+    if (profile == null || routeName == null || routeName.isEmpty) {
       setState(() {
-        _emailError = 'Invalid email or password.';
+        _formError =
+            'Login succeeded but navigation data was missing. Please try again.';
       });
-      _showMessage(
-        'Login failed. Check your credentials or create an account.',
-        isError: true,
-      );
+      _showMessage(_formError!, isError: true);
       return;
     }
 
     widget.onLoginSuccess();
-    _showMessage('Welcome back, ${RoleUtils.currentRole}.');
-    Navigator.pushReplacementNamed(context, HomePage.routeName);
-  }
 
-  void _fillAdminDemo() {
-    setState(() {
-      _emailController.text = RoleUtils.adminDemoEmail;
-      _passwordController.text = RoleUtils.adminDemoPassword;
-      _showStaffLogin = true;
-    });
+    if (result.message != null && result.message!.isNotEmpty) {
+      _showMessage(result.message!);
+    }
+
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      routeName,
+      (Route<dynamic> r) => false,
+      arguments: result.routeArguments,
+    );
   }
 
   @override
@@ -135,70 +149,43 @@ class _LoginPageState extends State<LoginPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           TextButton(
-            onPressed: () => Navigator.pushNamed(context, SignupPage.routeName),
+            onPressed: _isLoading
+                ? null
+                : () => Navigator.pushNamed(context, SignupPage.routeName),
             child: const Text('New to Job For All? Create an account'),
           ),
           const Divider(height: 32),
-          ExpansionTile(
-            tilePadding: EdgeInsets.zero,
-            title: const Text(
-              'Platform staff sign in',
-              style: TextStyle(fontWeight: FontWeight.w600),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.border),
             ),
-            subtitle: const Text(
-              'Admin accounts are created internally — not via public signup.',
-              style: TextStyle(fontSize: 12),
-            ),
-            initiallyExpanded: _showStaffLogin,
-            onExpansionChanged: (bool open) {
-              setState(() => _showStaffLogin = open);
-            },
-            children: <Widget>[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.amberSoft,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.amber.withValues(alpha: 0.4)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const Text(
-                      'Demo admin (development)',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Email: ${RoleUtils.adminDemoEmail}\n'
-                      'Password: ${RoleUtils.adminDemoPassword}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        height: 1.5,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    OutlinedButton(
-                      onPressed: _fillAdminDemo,
-                      child: const Text('Use demo admin credentials'),
-                    ),
-                  ],
-                ),
+            child: const Text(
+              'Admin accounts are created in the Supabase dashboard, not via public signup.',
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.5,
+                color: AppColors.textSecondary,
               ),
-            ],
+            ),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          if (_formError != null) ...<Widget>[
+            _ErrorBanner(message: _formError!),
+            const SizedBox(height: 16),
+          ],
           CommonTextField(
             controller: _emailController,
             labelText: 'Email',
             keyboardType: TextInputType.emailAddress,
             hasError: _emailError != null,
+            enabled: !_isLoading,
           ),
           ValidationMessage(message: _emailError),
           const SizedBox(height: 16),
@@ -207,21 +194,66 @@ class _LoginPageState extends State<LoginPage> {
             labelText: 'Password',
             obscureText: _obscurePassword,
             hasError: _passwordError != null,
+            enabled: !_isLoading,
             suffixIcon: IconButton(
               icon: Icon(
-                _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                _obscurePassword
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
               ),
-              onPressed: () {
-                setState(() => _obscurePassword = !_obscurePassword);
-              },
+              onPressed: _isLoading
+                  ? null
+                  : () => setState(() => _obscurePassword = !_obscurePassword),
             ),
           ),
           ValidationMessage(message: _passwordError),
           const SizedBox(height: 24),
-          CommonButton(
-            label: _isLoading ? 'Signing in…' : 'Sign in',
-            icon: Icons.login,
-            onPressed: _isLoading ? null : _login,
+          if (_isLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else
+            CommonButton(
+              label: 'Sign in',
+              icon: Icons.login,
+              onPressed: _login,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: Colors.red.shade800,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),

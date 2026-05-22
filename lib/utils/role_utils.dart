@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../models/user_profile.dart';
+
 class RoleUtils {
   RoleUtils._();
 
@@ -7,63 +9,58 @@ class RoleUtils {
   static const String employer = 'Employer';
   static const String admin = 'Admin';
 
-  /// Roles available on public signup (Admin is internal only).
   static const List<String> publicSignupRoles = <String>[jobSeeker, employer];
-
-  /// Demo admin account for platform staff (not on public signup).
-  static const String adminDemoEmail = 'admin@jobforall.et';
-  static const String adminDemoPassword = 'Admin2026!';
-
-  static final Map<String, Map<String, String>> userProfiles =
-      <String, Map<String, String>>{};
 
   static String currentRole = jobSeeker;
   static String? currentUserEmail;
+  static String? currentUserId;
+  static String? currentUserName;
+  static String? currentDbRole;
 
-  /// Seeds internal admin and other demo accounts at app start.
-  static void ensureDemoAccounts() {
-    userProfiles.putIfAbsent(
-      adminDemoEmail,
-      () => <String, String>{
-        'email': adminDemoEmail,
-        'password': adminDemoPassword,
-        'role': admin,
-      },
-    );
+  /// Tab to open when navigating to [HomePage] after login.
+  static String? pendingInitialTabKey;
+
+  static void setSession({required UserProfile profile}) {
+    currentUserId = profile.id;
+    currentUserEmail = profile.email;
+    currentUserName = profile.name;
+    currentDbRole = profile.role;
+    currentRole = _displayRoleFromDb(profile.role);
+    pendingInitialTabKey = _defaultTabForDbRole(profile.role);
   }
 
-  static void registerUser({
-    required String email,
-    required String password,
-    required String role,
-  }) {
-    if (role == admin) {
-      throw ArgumentError('Admin accounts cannot be created via public signup.');
-    }
-    if (!publicSignupRoles.contains(role)) {
-      throw ArgumentError('Invalid role for public signup.');
-    }
-
-    userProfiles[email.toLowerCase()] = <String, String>{
-      'email': email.toLowerCase(),
-      'password': password,
-      'role': role,
-    };
-    currentUserEmail = email.toLowerCase();
-    currentRole = role;
+  static void clearSession() {
+    currentUserId = null;
+    currentUserEmail = null;
+    currentUserName = null;
+    currentDbRole = null;
+    currentRole = jobSeeker;
+    pendingInitialTabKey = null;
   }
 
-  static bool loginUser({required String email, required String password}) {
-    ensureDemoAccounts();
-
-    final Map<String, String>? profile = userProfiles[email.toLowerCase()];
-    if (profile == null || profile['password'] != password) {
-      return false;
+  static String _displayRoleFromDb(String dbRole) {
+    switch (dbRole) {
+      case 'employer':
+        return employer;
+      case 'admin':
+        return admin;
+      case 'seeker':
+      default:
+        return jobSeeker;
     }
+  }
 
-    currentUserEmail = profile['email'];
-    currentRole = profile['role'] ?? jobSeeker;
-    return true;
+  static String? _defaultTabForDbRole(String dbRole) {
+    switch (dbRole) {
+      case 'employer':
+        return 'home';
+      case 'admin':
+        return 'admin';
+      case 'seeker':
+        return 'jobs';
+      default:
+        return null;
+    }
   }
 
   static bool isJobSeeker([String? role]) => (role ?? currentRole) == jobSeeker;

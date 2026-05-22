@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../data/mock_notification_store.dart';
+import '../pages/landing_page.dart';
+import '../services/auth_service.dart';
 import '../utils/role_utils.dart';
 import '../widgets/notification_panel.dart';
 import '../widgets/top_nav_bar.dart';
@@ -10,32 +12,54 @@ import 'employer_profile.dart';
 import 'job_listing_page.dart';
 import 'job_posting_page.dart';
 import 'job_seeker_profile.dart';
-import 'login_page.dart';
 import 'payment_page.dart';
 import 'ussd_simulation.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.onLogout});
+  const HomePage({super.key, required this.onLogout, this.initialTabKey});
 
   static const String routeName = '/home';
 
   final VoidCallback onLogout;
+  final String? initialTabKey;
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedTab = 0;
+  late int _selectedTab;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedTab = _indexForTabKey(
+      widget.initialTabKey ?? RoleUtils.pendingInitialTabKey,
+    );
+  }
 
   List<RoleNavItem> get _navItems =>
       RoleUtils.navItemsForRole(RoleUtils.currentRole);
 
-  void _logout(BuildContext context) {
+  int _indexForTabKey(String? key) {
+    if (key == null) {
+      return 0;
+    }
+    final int index = _navItems.indexWhere(
+      (RoleNavItem item) => item.key == key,
+    );
+    return index >= 0 ? index : 0;
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    await AuthService.instance.signOut();
     widget.onLogout();
+    if (!context.mounted) {
+      return;
+    }
     Navigator.pushNamedAndRemoveUntil(
       context,
-      LoginPage.routeName,
+      LandingPage.routeName,
       (Route<dynamic> route) => false,
     );
   }
