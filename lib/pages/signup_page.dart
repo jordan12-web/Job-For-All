@@ -28,12 +28,16 @@ class _SignupPageState extends State<SignupPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
+  final TextEditingController _companyNameController = TextEditingController();
+  final TextEditingController _contactInfoController = TextEditingController();
 
   String _selectedRole = RoleUtils.jobSeeker;
   String? _nameError;
   String? _emailError;
   String? _passwordError;
   String? _confirmPasswordError;
+  String? _companyNameError;
+  String? _contactInfoError;
   String? _formError;
   bool _isSubmitting = false;
   bool _obscurePassword = true;
@@ -50,6 +54,8 @@ class _SignupPageState extends State<SignupPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _companyNameController.dispose();
+    _contactInfoController.dispose();
     super.dispose();
   }
 
@@ -93,6 +99,20 @@ class _SignupPageState extends State<SignupPage> {
     return null;
   }
 
+  String? _validateCompanyName(String value) {
+    if (value.trim().isEmpty) {
+      return 'Company name is required.';
+    }
+    return null;
+  }
+
+  String? _validateContactInfo(String value) {
+    if (value.trim().isEmpty) {
+      return 'Contact information is required.';
+    }
+    return null;
+  }
+
   bool _validateForm() {
     final String password = _passwordController.text;
     final String confirmPassword = _confirmPasswordController.text;
@@ -102,6 +122,21 @@ class _SignupPageState extends State<SignupPage> {
       _emailError = _validateEmail(_emailController.text.trim());
       _passwordError = _validatePassword(password);
       _formError = null;
+      
+      // Validate role is selected
+      if (_selectedRole.isEmpty) {
+        _formError = 'Please select a role.';
+      }
+      
+      // Validate employer-specific fields if employer is selected
+      if (_selectedRole == RoleUtils.employer) {
+        _companyNameError = _validateCompanyName(_companyNameController.text);
+        _contactInfoError = _validateContactInfo(_contactInfoController.text);
+      } else {
+        _companyNameError = null;
+        _contactInfoError = null;
+      }
+      
       if (confirmPassword.isEmpty) {
         _confirmPasswordError = 'Please confirm your password.';
       } else if (confirmPassword != password) {
@@ -114,7 +149,10 @@ class _SignupPageState extends State<SignupPage> {
     return _nameError == null &&
         _emailError == null &&
         _passwordError == null &&
-        _confirmPasswordError == null;
+        _confirmPasswordError == null &&
+        _companyNameError == null &&
+        _contactInfoError == null &&
+        _formError == null;
   }
 
   Future<void> _signup() async {
@@ -128,11 +166,23 @@ class _SignupPageState extends State<SignupPage> {
       _formError = null;
     });
 
+    final String name = _nameController.text.trim();
+    final String email = _emailController.text.trim();
+    final String companyName = _companyNameController.text.trim();
+    final String contactInfo = _contactInfoController.text.trim();
+    
+    debugPrint('🔐 SignupPage: Submitting signup with email=$email, name=$name, role=$_selectedRole');
+    if (_selectedRole == RoleUtils.employer) {
+      debugPrint('🔐 SignupPage: Employer metadata - company=$companyName, contact=$contactInfo');
+    }
+
     final AuthResult result = await AuthService.instance.signUp(
-      email: _emailController.text.trim(),
+      email: email,
       password: _passwordController.text,
-      name: _nameController.text.trim(),
+      name: name,
       displayRole: _selectedRole,
+      companyName: _selectedRole == RoleUtils.employer ? companyName : null,
+      contactInfo: _selectedRole == RoleUtils.employer ? contactInfo : null,
     );
 
     if (!mounted) {
@@ -267,6 +317,25 @@ class _SignupPageState extends State<SignupPage> {
           ),
           ValidationMessage(message: _nameError),
           const SizedBox(height: 16),
+          // Show employer fields only when employer role is selected
+          if (_selectedRole == RoleUtils.employer) ...<Widget>[
+            CommonTextField(
+              controller: _companyNameController,
+              labelText: 'Company name',
+              hasError: _companyNameError != null,
+              enabled: !_isSubmitting,
+            ),
+            ValidationMessage(message: _companyNameError),
+            const SizedBox(height: 16),
+            CommonTextField(
+              controller: _contactInfoController,
+              labelText: 'Contact information (email/phone)',
+              hasError: _contactInfoError != null,
+              enabled: !_isSubmitting,
+            ),
+            ValidationMessage(message: _contactInfoError),
+            const SizedBox(height: 16),
+          ],
           CommonTextField(
             controller: _emailController,
             labelText: 'Email',

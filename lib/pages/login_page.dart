@@ -90,8 +90,11 @@ class _LoginPageState extends State<LoginPage> {
       _formError = null;
     });
 
+    final String email = _emailController.text.trim();
+    debugPrint('🔐 LoginPage: Attempting login for email=$email');
+
     final AuthResult result = await AuthService.instance.signIn(
-      email: _emailController.text.trim(),
+      email: email,
       password: _passwordController.text,
     );
 
@@ -109,6 +112,14 @@ class _LoginPageState extends State<LoginPage> {
 
     final UserProfile? profile = result.profile;
     final String? routeName = result.routeName;
+
+    debugPrint('🔐 LoginPage: Login successful');
+    if (profile != null) {
+      debugPrint('🔐 LoginPage: Profile - id=${profile.id}, email=${profile.email}, role=${profile.role}');
+    }
+    if (routeName != null) {
+      debugPrint('🔐 LoginPage: Routing to $routeName');
+    }
 
     if (profile == null || routeName == null || routeName.isEmpty) {
       setState(() {

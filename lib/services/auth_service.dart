@@ -3,7 +3,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/user_profile.dart';
 import '../pages/admin_dashboard.dart';
+import '../pages/employer_profile.dart';
 import '../pages/home_page.dart';
+import '../pages/job_listing_page.dart';
 import '../pages/login_page.dart';
 import '../utils/debug_logger.dart';
 import '../utils/role_utils.dart';
@@ -130,6 +132,8 @@ class AuthService {
     required String password,
     required String name,
     required String displayRole,
+    String? companyName,
+    String? contactInfo,
   }) async {
     final String trimmedEmail = email.trim().toLowerCase();
     final String trimmedName = name.trim();
@@ -154,13 +158,40 @@ class AuthService {
       return AuthResult.failure('Email is required.');
     }
 
+    // Validate employer-specific fields
+    if (dbRole == 'employer') {
+      final String trimmedCompany = (companyName ?? '').trim();
+      final String trimmedContact = (contactInfo ?? '').trim();
+      
+      if (trimmedCompany.isEmpty) {
+        DebugLogger.warning('Company name is empty for employer');
+        return AuthResult.failure('Company name is required for employers.');
+      }
+      
+      if (trimmedContact.isEmpty) {
+        DebugLogger.warning('Contact info is empty for employer');
+        return AuthResult.failure('Contact information is required for employers.');
+      }
+    }
+
     try {
-      DebugLogger.info('Signup metadata being sent: {name: "$trimmedName"}');
+      final Map<String, dynamic> metadata = <String, dynamic>{
+        'name': trimmedName,
+        'role': dbRole,
+      };
+      
+      // Add employer-specific metadata
+      if (dbRole == 'employer') {
+        metadata['company_name'] = (companyName ?? '').trim();
+        metadata['contact_info'] = (contactInfo ?? '').trim();
+      }
+      
+      DebugLogger.info('Signup metadata being sent: {name: "$trimmedName", role: "$dbRole"${dbRole == 'employer' ? ', company: "${(companyName ?? '').trim()}", contact: "${(contactInfo ?? '').trim()}"' : ''}}');
       
       final AuthResponse response = await _client.auth.signUp(
         email: trimmedEmail,
         password: password,
-        data: <String, dynamic>{'name': trimmedName},
+        data: metadata,
       );
 
       final User? user = response.user;
@@ -173,7 +204,7 @@ class AuthService {
 
       DebugLogger.info('Signup successful for user: ${user.id}');
       DebugLogger.info('User metadata: ${user.userMetadata}');
-      DebugLogger.info('User email verified: ${user.emailConfirmedAt}');
+      DebugLogger.info('Response: name=${user.userMetadata?['name']}, role=${user.userMetadata?['role']}${dbRole == 'employer' ? ', company=${user.userMetadata?['company_name']}, contact=${user.userMetadata?['contact_info']}' : ''}');
 
       final Session? session = response.session;
 
@@ -262,6 +293,7 @@ class AuthService {
       }
 
       DebugLogger.info('Signin successful for user: ${user.id}');
+      DebugLogger.step('Fetching profile from users table...');
 
       final UserProfile? profile = await _fetchUserProfile(user.id);
       if (profile == null) {
@@ -272,8 +304,13 @@ class AuthService {
         );
       }
 
-      DebugLogger.success('Signin complete for: ${profile.email}');
+      DebugLogger.success('Profile fetched: ${profile.email} (role: ${profile.role})');
+      DebugLogger.info('Profile data: id=${profile.id}, name=${profile.name}, role=${profile.role}');
+      
       RoleUtils.setSession(profile: profile);
+      
+      final String routeName = dashboardRouteForRole(profile.role);
+      DebugLogger.target('Routing to: $routeName (role: ${profile.role})');
 
       final String welcomeName =
           profile.name.isNotEmpty ? profile.name : 'there';
@@ -411,27 +448,25 @@ class AuthService {
   }
 
   String dashboardRouteForRole(String dbRole) {
-    switch (dbRole) {
-      case 'admin':
-        return AdminDashboard.routeName;
-      case 'employer':
-        return HomePage.routeName;
-      case 'seeker':
-      default:
-        return HomePage.routeName;
-    }
+    final String route = switch (dbRole) {
+      'admin' => AdminDashboard.routeName,
+      'employer' => EmployerProfile.routeName,
+      'seeker' || _ => JobListingPage.routeName,
+    };
+    
+    DebugLogger.info('Dashboard route for role "$dbRole": $route');
+    return route;
   }
 
   Object? dashboardArgumentsForRole(String dbRole) {
-    switch (dbRole) {
-      case 'admin':
-        return null;
-      case 'employer':
-        return const HomePageArgs(initialTabKey: 'home');
-      case 'seeker':
-      default:
-        return const HomePageArgs(initialTabKey: 'jobs');
-    }
+    final Object? args = switch (dbRole) {
+      'admin' => null,
+      'employer' => null,
+      'seeker' || _ => null,
+    };
+    
+    DebugLogger.info('Dashboard args for role "$dbRole": $args');
+    return args;
   }
 
   String _mapAuthError(AuthException e) {
