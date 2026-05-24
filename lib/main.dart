@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'models/user_profile.dart';
@@ -25,26 +24,23 @@ Future<void> main() async {
   DebugLogger.log('═════════════════════════════════════════');
   DebugLogger.log('🚀 STARTING JOB FOR ALL APP');
   DebugLogger.log('═════════════════════════════════════════');
-  
+
   try {
     DebugLogger.step('Ensuring Flutter bindings...');
     WidgetsFlutterBinding.ensureInitialized();
     DebugLogger.success('Flutter bindings initialized');
-    
-    DebugLogger.step('Loading .env file...');
-    await dotenv.load(fileName: '.env');
-    DebugLogger.success('.env loaded successfully');
-    
-    DebugLogger.step('Initializing Supabase...');
+
+    // AuthService.initialize() loads .env AND initializes Supabase.
+    // Do NOT call dotenv.load() here — that would load it twice and crash.
+    DebugLogger.step('Initializing Supabase via AuthService...');
     await AuthService.initialize();
     DebugLogger.success('Supabase initialized successfully');
-    DebugLogger.info('Supabase URL: ${dotenv.env['SUPABASE_URL']}');
-    DebugLogger.info('Supabase client initialized: ${Supabase.instance.client.toString()}');
+    DebugLogger.info('Supabase client ready: ${Supabase.instance.client.toString()}');
   } catch (e) {
     DebugLogger.error('FATAL ERROR during initialization: $e');
     rethrow;
   }
-  
+
   DebugLogger.step('Starting app...');
   runApp(const JobForAllApp());
   DebugLogger.success('App widget created');
@@ -71,19 +67,17 @@ class _JobForAllAppState extends State<JobForAllApp> {
 
   Future<void> _bootstrap() async {
     DebugLogger.log('🚀 _bootstrap() started');
-    
+
     try {
       final Session? session = Supabase.instance.client.auth.currentSession;
       DebugLogger.info('Current session: ${session?.user.id ?? 'null'}');
-      
-      // Check if session is null
+
       if (session == null || session.user.id.isEmpty) {
         DebugLogger.warning('No active session found, routing to LandingPage');
         if (!mounted) {
           DebugLogger.warning('Widget no longer mounted, skipping setState');
           return;
         }
-        
         setState(() {
           _isLoggedIn = false;
           _isBootstrapping = false;
@@ -91,34 +85,33 @@ class _JobForAllAppState extends State<JobForAllApp> {
         });
         return;
       }
-      
-      // Try to restore the user profile
+
       final UserProfile? profile = await AuthService.instance.tryRestoreSession();
-      final String sessionInfo = profile != null 
-        ? 'YES (${profile.email} - ${profile.role})'
-        : 'NO (null)';
+      final String sessionInfo = profile != null
+          ? 'YES (${profile.email} - ${profile.role})'
+          : 'NO (null)';
       DebugLogger.lifecycle('Session restored: $sessionInfo');
-      
+
       if (!mounted) {
         DebugLogger.warning('Widget no longer mounted, skipping setState');
         return;
       }
-      
+
       setState(() {
         _isLoggedIn = profile != null;
         _isBootstrapping = false;
         _errorMessage = '';
       });
-      
+
       DebugLogger.success('Bootstrap complete. Logged in: $_isLoggedIn');
     } catch (e, stackTrace) {
       DebugLogger.error('Bootstrap error: $e', stackTrace);
-      
+
       if (mounted) {
         setState(() {
           _isLoggedIn = false;
           _isBootstrapping = false;
-          _errorMessage = 'Error: ${e.toString()}';
+          _errorMessage = 'Startup error: ${e.toString()}';
         });
       }
     }
@@ -132,7 +125,7 @@ class _JobForAllAppState extends State<JobForAllApp> {
   @override
   Widget build(BuildContext context) {
     DebugLogger.ui('JobForAllApp.build() - isBootstrapping=$_isBootstrapping, isLoggedIn=$_isLoggedIn');
-    
+
     if (_isBootstrapping) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -171,7 +164,10 @@ class _JobForAllAppState extends State<JobForAllApp> {
               children: <Widget>[
                 const Icon(Icons.error_outline, size: 64, color: Colors.red),
                 const SizedBox(height: 16),
-                const Text('App Initialization Error'),
+                const Text(
+                  'App Initialization Error',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -188,8 +184,10 @@ class _JobForAllAppState extends State<JobForAllApp> {
       );
     }
 
-    DebugLogger.target('Routing to: ${_isLoggedIn ? HomePage.routeName : LandingPage.routeName}');
-    
+    DebugLogger.target(
+      'Routing to: ${_isLoggedIn ? HomePage.routeName : LandingPage.routeName}',
+    );
+
     return MaterialApp(
       title: 'Job For All',
       debugShowCheckedModeBanner: false,

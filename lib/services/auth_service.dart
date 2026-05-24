@@ -4,7 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_profile.dart';
 import '../pages/admin_dashboard.dart';
 import '../pages/employer_profile.dart';
-import '../pages/home_page.dart';
 import '../pages/job_listing_page.dart';
 import '../pages/login_page.dart';
 import '../utils/debug_logger.dart';
@@ -51,9 +50,6 @@ class AuthResult {
 }
 
 /// Supabase authentication and `users` table integration.
-///
-/// A DB trigger inserts into `users` on auth signup (default role: seeker).
-/// This service updates name and the user-selected role after signup.
 class AuthService {
   AuthService._();
 
@@ -74,14 +70,12 @@ class AuthService {
 
     if (url == null || url.isEmpty || anonKey == null || anonKey.isEmpty) {
       DebugLogger.error('Missing SUPABASE_URL or SUPABASE_ANON_KEY in .env');
-      throw Exception(
-        'Missing SUPABASE_URL or SUPABASE_ANON_KEY in .env',
-      );
+      throw Exception('Missing SUPABASE_URL or SUPABASE_ANON_KEY in .env');
     }
 
     DebugLogger.info('SUPABASE_URL: $url');
     DebugLogger.info('SUPABASE_ANON_KEY: ${anonKey.substring(0, 20)}...');
-    
+
     DebugLogger.step('Initializing Supabase client...');
     await Supabase.initialize(url: url, anonKey: anonKey);
     DebugLogger.success('Supabase client initialized');
@@ -91,7 +85,7 @@ class AuthService {
 
   Future<UserProfile?> tryRestoreSession() async {
     DebugLogger.step('Attempting to restore session...');
-    
+
     final Session? session = _client.auth.currentSession;
     if (session == null) {
       DebugLogger.warning('No active session found');
@@ -107,15 +101,15 @@ class AuthService {
     }
 
     DebugLogger.info('Session found for user: ${user.id}');
-    
     final UserProfile? profile = await _fetchUserProfile(user.id);
+
     if (profile == null) {
-      DebugLogger.error('Profile not found for user: ${user.id}');
+      DebugLogger.error('Profile not found during session restore: ${user.id}');
       await signOut();
       return null;
     }
 
-    DebugLogger.success('Profile restored: ${profile.email} (role: ${profile.role})');
+    DebugLogger.success('Session restored: ${profile.email} (${profile.role})');
     RoleUtils.setSession(profile: profile);
     return profile;
   }
@@ -139,38 +133,27 @@ class AuthService {
     final String trimmedName = name.trim();
     final String dbRole = dbRoleFromDisplay(displayRole);
 
-    DebugLogger.step('Starting signup for: $trimmedEmail (role: $dbRole)');
+    DebugLogger.step('Starting signup: $trimmedEmail (role: $dbRole)');
 
     if (!allowedSignupRoles.contains(dbRole)) {
-      DebugLogger.warning('Invalid role attempted: $dbRole');
       return AuthResult.failure(
         'Invalid role. Only job seekers and employers can register.',
       );
     }
-
     if (trimmedName.isEmpty) {
-      DebugLogger.warning('Name is empty');
       return AuthResult.failure('Full name is required.');
     }
-
     if (trimmedEmail.isEmpty) {
-      DebugLogger.warning('Email is empty');
       return AuthResult.failure('Email is required.');
     }
-
-    // Validate employer-specific fields
     if (dbRole == 'employer') {
-      final String trimmedCompany = (companyName ?? '').trim();
-      final String trimmedContact = (contactInfo ?? '').trim();
-      
-      if (trimmedCompany.isEmpty) {
-        DebugLogger.warning('Company name is empty for employer');
+      if ((companyName ?? '').trim().isEmpty) {
         return AuthResult.failure('Company name is required for employers.');
       }
-      
-      if (trimmedContact.isEmpty) {
-        DebugLogger.warning('Contact info is empty for employer');
-        return AuthResult.failure('Contact information is required for employers.');
+      if ((contactInfo ?? '').trim().isEmpty) {
+        return AuthResult.failure(
+          'Contact information is required for employers.',
+        );
       }
     }
 
@@ -178,16 +161,12 @@ class AuthService {
       final Map<String, dynamic> metadata = <String, dynamic>{
         'name': trimmedName,
         'role': dbRole,
+        if (dbRole == 'employer') 'company_name': (companyName ?? '').trim(),
+        if (dbRole == 'employer') 'contact_info': (contactInfo ?? '').trim(),
       };
-      
-      // Add employer-specific metadata
-      if (dbRole == 'employer') {
-        metadata['company_name'] = (companyName ?? '').trim();
-        metadata['contact_info'] = (contactInfo ?? '').trim();
-      }
-      
-      DebugLogger.info('Signup metadata being sent: {name: "$trimmedName", role: "$dbRole"${dbRole == 'employer' ? ', company: "${(companyName ?? '').trim()}", contact: "${(contactInfo ?? '').trim()}"' : ''}}');
-      
+
+      DebugLogger.info('Signup metadata: $metadata');
+
       final AuthResponse response = await _client.auth.signUp(
         email: trimmedEmail,
         password: password,
@@ -196,73 +175,56 @@ class AuthService {
 
       final User? user = response.user;
       if (user == null || user.id.isEmpty) {
-        DebugLogger.error('Signup did not return a user');
         return AuthResult.failure(
           'Signup did not return a user. Please try again.',
         );
       }
 
-      DebugLogger.info('Signup successful for user: ${user.id}');
-      DebugLogger.info('User metadata: ${user.userMetadata}');
-      DebugLogger.info('Response: name=${user.userMetadata?['name']}, role=${user.userMetadata?['role']}${dbRole == 'employer' ? ', company=${user.userMetadata?['company_name']}, contact=${user.userMetadata?['contact_info']}' : ''}');
+      DebugLogger.info('Signup auth OK: ${user.id}');
+      DebugLogger.info('Metadata confirmed: ${user.userMetadata}');
 
-      final Session? session = response.session;
-
-      if (session == null) {
+      // Email confirmation is ON — no session yet, send to login
+      if (response.session == null) {
         DebugLogger.info('Email confirmation required');
         return AuthResult(
           success: true,
           message:
-              'Account created. Confirm your email, then sign in to finish setup.',
+              'Account created! Please check your email to verify, then sign in.',
           routeName: LoginPage.routeName,
           needsEmailConfirmation: true,
         );
       }
 
-      final UserProfile? existing = await _waitForUserProfile(user.id);
-      if (existing == null) {
-        DebugLogger.error('Profile not created after signup');
-        return AuthResult.failure(
-          'Your account was created but your profile is not ready yet. '
-          'Wait a moment and sign in.',
-        );
-      }
-
-      final UserProfile? updated = await _updateUserProfile(
-        userId: user.id,
-        name: trimmedName,
-        role: dbRole,
-        email: trimmedEmail,
+      // Email confirmation is OFF — session exists, wait for trigger
+      DebugLogger.info(
+        'Session exists — waiting for trigger to create profile...',
       );
+      final UserProfile? profile = await _waitForUserProfile(user.id);
 
-      if (updated == null) {
-        DebugLogger.error('Failed to update user profile');
+      if (profile == null) {
         return AuthResult.failure(
-          'Could not save your role and name. Please sign in and contact support if this continues.',
+          'Account created but profile setup is pending. Please sign in.',
         );
       }
 
-      DebugLogger.success('Signup complete for: $trimmedEmail');
-      RoleUtils.setSession(profile: updated);
+      DebugLogger.success(
+        'Signup complete: ${profile.email} (${profile.role})',
+      );
+      RoleUtils.setSession(profile: profile);
 
       return AuthResult.success(
-        profile: updated,
-        routeName: dashboardRouteForRole(updated.role),
-        routeArguments: dashboardArgumentsForRole(updated.role),
-        message: 'Welcome, ${updated.name}!',
+        profile: profile,
+        routeName: dashboardRouteForRole(profile.role),
+        message: 'Welcome, ${profile.name}!',
       );
     } on AuthException catch (e) {
-      DebugLogger.error('Auth error during signup: ${e.message}');
-      DebugLogger.error('Auth error code: ${e.statusCode}');
-      DebugLogger.error('Full error: $e');
+      DebugLogger.error('Auth error: ${e.message}');
       return AuthResult.failure(_mapAuthError(e));
     } on PostgrestException catch (e) {
-      DebugLogger.error('Database error during signup: ${e.message}');
-      DebugLogger.error('Database error code: ${e.code}');
-      DebugLogger.error('Full error: $e');
+      DebugLogger.error('DB error: ${e.message} (${e.code})');
       return AuthResult.failure(_mapPostgrestError(e));
-    } catch (e, stackTrace) {
-      DebugLogger.error('Unexpected error during signup: $e', stackTrace);
+    } catch (e, s) {
+      DebugLogger.error('Unexpected signup error: $e', s);
       return AuthResult.failure('Signup failed. Please try again.');
     }
   }
@@ -272,11 +234,9 @@ class AuthService {
     required String password,
   }) async {
     final String trimmedEmail = email.trim();
-
-    DebugLogger.step('Starting signin for: $trimmedEmail');
+    DebugLogger.step('Starting signin: $trimmedEmail');
 
     if (trimmedEmail.isEmpty) {
-      DebugLogger.warning('Email is empty');
       return AuthResult.failure('Email is required.');
     }
 
@@ -288,47 +248,51 @@ class AuthService {
 
       final User? user = response.user;
       if (user == null || user.id.isEmpty) {
-        DebugLogger.error('Login failed: No user returned');
-        return AuthResult.failure('Login failed. No user returned from server.');
+        return AuthResult.failure(
+          'Login failed. No user returned from server.',
+        );
       }
 
-      DebugLogger.info('Signin successful for user: ${user.id}');
-      DebugLogger.step('Fetching profile from users table...');
+      if (response.session == null) {
+        return AuthResult.failure(
+          'Login failed. No session returned from server.',
+        );
+      }
+
+      DebugLogger.info('Auth OK: ${user.id}');
+      DebugLogger.step('Fetching profile...');
+
+      // Small delay to ensure PostgREST picks up the new session token
+      await Future<void>.delayed(const Duration(milliseconds: 500));
 
       final UserProfile? profile = await _fetchUserProfile(user.id);
+
       if (profile == null) {
-        DebugLogger.error('Profile not found for user: ${user.id}');
+        DebugLogger.error('No profile row found for: ${user.id}');
         return AuthResult.failure(
           'Signed in, but no profile was found. '
           'An administrator may need to complete your account setup.',
         );
       }
 
-      DebugLogger.success('Profile fetched: ${profile.email} (role: ${profile.role})');
-      DebugLogger.info('Profile data: id=${profile.id}, name=${profile.name}, role=${profile.role}');
-      
+      DebugLogger.success('Profile: ${profile.email} (${profile.role})');
       RoleUtils.setSession(profile: profile);
-      
-      final String routeName = dashboardRouteForRole(profile.role);
-      DebugLogger.target('Routing to: $routeName (role: ${profile.role})');
-
-      final String welcomeName =
-          profile.name.isNotEmpty ? profile.name : 'there';
 
       return AuthResult.success(
         profile: profile,
         routeName: dashboardRouteForRole(profile.role),
         routeArguments: dashboardArgumentsForRole(profile.role),
-        message: 'Welcome back, $welcomeName!',
+        message:
+            'Welcome back, ${profile.name.isNotEmpty ? profile.name : 'there'}!',
       );
     } on AuthException catch (e) {
-      DebugLogger.error('Auth error during signin: ${e.message}');
+      DebugLogger.error('Auth error: ${e.message}');
       return AuthResult.failure(_mapAuthError(e));
     } on PostgrestException catch (e) {
-      DebugLogger.error('Database error during signin: ${e.message}');
+      DebugLogger.error('DB error: ${e.message} (${e.code})');
       return AuthResult.failure(_mapPostgrestError(e));
     } catch (e) {
-      DebugLogger.error('Unexpected error during signin: $e');
+      DebugLogger.error('Unexpected signin error: $e');
       return AuthResult.failure('Login failed. Please try again.');
     }
   }
@@ -342,40 +306,46 @@ class AuthService {
       DebugLogger.error('Error during signout: $e');
     } finally {
       RoleUtils.clearSession();
-      DebugLogger.info('Session cleared');
     }
   }
 
+  // ── Private helpers ────────────────────────────────────────
+
   Future<UserProfile?> _fetchUserProfile(String userId) async {
     if (userId.isEmpty) {
-      DebugLogger.warning('Attempting to fetch profile for empty user ID');
+      DebugLogger.warning('Empty userId passed to _fetchUserProfile');
       return null;
     }
 
     try {
-      DebugLogger.step('Fetching profile for user: $userId');
+      DebugLogger.step('DB fetch: users WHERE id=$userId');
+
       final Map<String, dynamic>? row = await _client
           .from(usersTable)
-          .select()
-          .eq('id', userId)
+          .select('id, email, name, role') // explicit columns — avoids
+          .eq('id', userId) // fetching cols that don't exist
           .maybeSingle();
 
       if (row == null) {
-        DebugLogger.warning('No profile found in database for user: $userId');
+        DebugLogger.warning('maybeSingle() returned null for id=$userId');
+        DebugLogger.warning('Either RLS blocked the row or it does not exist');
         return null;
       }
 
-      DebugLogger.info('Profile row fetched: $row');
+      DebugLogger.info('Raw row: $row');
       final UserProfile? profile = UserProfile.tryFromMap(row);
+
       if (profile == null) {
-        DebugLogger.error('Failed to parse profile row: $row');
+        DebugLogger.error('tryFromMap failed for row: $row');
       } else {
-        DebugLogger.success('Profile parsed successfully: ${profile.email}');
+        DebugLogger.success('Parsed: ${profile.email} (${profile.role})');
       }
+
       return profile;
     } on PostgrestException catch (e) {
-      DebugLogger.error('Database error fetching profile: ${e.message}');
-      DebugLogger.error('Error code: ${e.code}');
+      DebugLogger.error(
+        'PostgrestException: ${e.message} | code: ${e.code} | hint: ${e.hint}',
+      );
       return null;
     }
   }
@@ -384,105 +354,49 @@ class AuthService {
     String userId, {
     int maxAttempts = 8,
   }) async {
-    DebugLogger.step('Waiting for profile to be created (max $maxAttempts attempts)...');
-    for (int attempt = 0; attempt < maxAttempts; attempt++) {
-      final UserProfile? profile = await _fetchUserProfile(userId);
-      if (profile != null) {
-        DebugLogger.success('Profile found on attempt ${attempt + 1}');
-        return profile;
+    DebugLogger.step(
+      'Waiting for trigger to write profile (max $maxAttempts)...',
+    );
+    for (int i = 0; i < maxAttempts; i++) {
+      final UserProfile? p = await _fetchUserProfile(userId);
+      if (p != null) {
+        DebugLogger.success('Profile ready on attempt ${i + 1}');
+        return p;
       }
-      final int waitMs = 250 * (attempt + 1);
-      DebugLogger.info('Attempt ${attempt + 1} failed, waiting ${waitMs}ms before retry...');
-      await Future<void>.delayed(Duration(milliseconds: waitMs));
+      final int ms = 300 * (i + 1);
+      DebugLogger.info('Attempt ${i + 1}: not ready, waiting ${ms}ms...');
+      await Future<void>.delayed(Duration(milliseconds: ms));
     }
-    DebugLogger.error('Profile not created after $maxAttempts attempts');
+    DebugLogger.error('Profile never appeared after $maxAttempts attempts');
     return null;
-  }
-
-  Future<UserProfile?> _updateUserProfile({
-    required String userId,
-    required String name,
-    required String role,
-    required String email,
-  }) async {
-    if (userId.isEmpty) {
-      DebugLogger.warning('Cannot update profile: empty user ID');
-      return null;
-    }
-
-    if (!allowedSignupRoles.contains(role)) {
-      DebugLogger.warning('Cannot update profile: invalid role: $role');
-      return null;
-    }
-
-    try {
-      DebugLogger.step('Updating profile for user: $userId');
-      DebugLogger.info('Update data: {name: "$name", role: "$role", email: "$email"}');
-      
-      final List<Map<String, dynamic>> rows = await _client
-          .from(usersTable)
-          .update(<String, dynamic>{
-            'name': name,
-            'role': role,
-            'email': email,
-          })
-          .eq('id', userId)
-          .select();
-
-      if (rows.isEmpty) {
-        DebugLogger.warning('Update returned no rows, refetching profile...');
-        return await _fetchUserProfile(userId);
-      }
-
-      DebugLogger.success('Profile updated successfully');
-      final UserProfile? updated = UserProfile.tryFromMap(rows.first);
-      if (updated != null) {
-        DebugLogger.info('Updated profile: ${updated.email} (role: ${updated.role})');
-      }
-      return updated;
-    } on PostgrestException catch (e) {
-      DebugLogger.error('Error updating profile: ${e.message}');
-      DebugLogger.error('Error code: ${e.code}');
-      return null;
-    }
   }
 
   String dashboardRouteForRole(String dbRole) {
     final String route = switch (dbRole) {
       'admin' => AdminDashboard.routeName,
       'employer' => EmployerProfile.routeName,
-      'seeker' || _ => JobListingPage.routeName,
+      _ => JobListingPage.routeName,
     };
-    
-    DebugLogger.info('Dashboard route for role "$dbRole": $route');
+    DebugLogger.info('Route for "$dbRole": $route');
     return route;
   }
 
-  Object? dashboardArgumentsForRole(String dbRole) {
-    final Object? args = switch (dbRole) {
-      'admin' => null,
-      'employer' => null,
-      'seeker' || _ => null,
-    };
-    
-    DebugLogger.info('Dashboard args for role "$dbRole": $args');
-    return args;
-  }
+  Object? dashboardArgumentsForRole(String dbRole) => null;
 
   String _mapAuthError(AuthException e) {
-    final String message = e.message.toLowerCase();
-    if (message.contains('invalid login credentials')) {
+    final String msg = e.message.toLowerCase();
+    if (msg.contains('invalid login credentials')) {
       return 'Invalid email or password.';
     }
-    if (message.contains('user already registered') ||
-        message.contains('already been registered')) {
+    if (msg.contains('user already registered') ||
+        msg.contains('already been registered')) {
       return 'An account with this email already exists.';
     }
-    if (message.contains('password')) {
-      return 'Password does not meet requirements.';
+    if (msg.contains('email not confirmed')) {
+      return 'Please verify your email before signing in.';
     }
-    if (message.contains('email not confirmed')) {
-      return 'Please confirm your email before signing in.';
+    if (msg.contains('password')) {
+      return 'Password does not meet requirements.';
     }
     return e.message.isNotEmpty ? e.message : 'Authentication failed.';
   }
@@ -492,15 +406,16 @@ class AuthService {
       return 'A profile for this account already exists.';
     }
     if (e.code == '42501') {
-      return 'Permission denied. Check Supabase RLS policies for the users table.';
+      return 'Permission denied. Check Supabase RLS policies.';
     }
-    return e.message.isNotEmpty ? e.message : 'Database error. Please try again.';
+    return e.message.isNotEmpty
+        ? e.message
+        : 'Database error. Please try again.';
   }
 }
 
 /// Arguments for [HomePage] role-based landing tab.
 class HomePageArgs {
   const HomePageArgs({required this.initialTabKey});
-
   final String initialTabKey;
 }
