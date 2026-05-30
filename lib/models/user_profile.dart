@@ -42,13 +42,16 @@ class UserProfile {
     return text.isEmpty ? null : text;
   }
 
-  // FIX: use null-aware operator '?' instead of if-null checks (lines 51-53)
   Map<String, dynamic> toUpdateMap({
     String? name,
     String? email,
     String? role,
   }) {
-    return <String, dynamic>{?'name': name, ?'email': email, ?'role': role};
+    return <String, dynamic>{
+      if (name case final String n) 'name': n,
+      if (email case final String e) 'email': e,
+      if (role case final String r) 'role': r,
+    };
   }
 
   bool get isSeeker => role == 'seeker';

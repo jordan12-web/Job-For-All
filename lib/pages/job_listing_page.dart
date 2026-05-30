@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../data/mock_application_store.dart';
 import '../data/mock_job_store.dart';
 import '../data/mock_profile_store.dart';
+import '../models/job.dart';
+import '../services/job_service.dart';
+import '../utils/debug_logger.dart';
 import '../utils/matching_utils.dart';
 import '../widgets/common_button.dart';
 import '../widgets/common_text_field.dart';
@@ -25,6 +28,7 @@ class JobListingPage extends StatefulWidget {
 class _JobListingPageState extends State<JobListingPage> {
   final TextEditingController _searchController = TextEditingController();
 
+  List<Job> _allJobs = <Job>[];
   String _searchKeyword = '';
   String _selectedLocation = 'All';
   String _selectedJobType = 'All';
@@ -50,17 +54,25 @@ class _JobListingPageState extends State<JobListingPage> {
     });
 
     try {
-      await Future<void>.delayed(const Duration(milliseconds: 700));
+      DebugLogger.step('JobListingPage: Loading jobs from Supabase');
+      final List<Job> jobs = await JobService.instance.fetchApprovedJobs();
+      
       if (!mounted) {
         return;
       }
+
+      DebugLogger.success('JobListingPage: Loaded ${jobs.length} jobs');
       setState(() {
+        _allJobs = jobs;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
+      DebugLogger.error('JobListingPage: Error loading jobs: $e');
+      
       if (!mounted) {
         return;
       }
+
       setState(() {
         _isLoading = false;
         _loadError = 'Could not load jobs. Pull down to retry.';
@@ -69,21 +81,20 @@ class _JobListingPageState extends State<JobListingPage> {
   }
 
   List<String> get _locationOptions {
-    final Set<String> locations = MockJobStore.jobs
-        .map((Map<String, String> job) => job['location'] ?? '')
-        .where((String location) => location.isNotEmpty)
+    final Set<String> locations = _allJobs
+        .where((Job job) => job.location != null && job.location!.isNotEmpty)
+        .map((Job job) => job.location!)
         .toSet();
     return <String>['All', ...locations.toList()..sort()];
   }
 
-  List<Map<String, String>> get _filteredJobs {
-    return MockJobStore.jobs.where((Map<String, String> job) {
-      final String title = job['title'] ?? '';
-      final String company = job['company'] ?? '';
-      final String location = job['location'] ?? '';
-      final String type = job['type'] ?? '';
-      final String description = job['description'] ?? '';
-      final String status = job['status'] ?? 'Pending';
+  List<Job> get _filteredJobs {
+    return _allJobs.where((Job job) {
+      final String title = job.title;
+      final String company = job.company ?? '';
+      final String location = job.location ?? '';
+      final String type = job.type ?? '';
+      final String description = job.description;
       final String keyword = _searchKeyword.toLowerCase();
 
       final bool matchesKeyword =
@@ -96,32 +107,31 @@ class _JobListingPageState extends State<JobListingPage> {
       final bool matchesType =
           _selectedJobType == 'All' || type == _selectedJobType;
 
-      return status != 'Rejected' &&
-          matchesKeyword &&
+      return matchesKeyword &&
           matchesLocation &&
           matchesType;
     }).toList();
   }
 
-  void _openJobDetails(Map<String, String> job) {
+  void _openJobDetails(Job job) {
     Navigator.push(
       context,
       MaterialPageRoute<void>(
-        builder: (BuildContext context) => JobDetailPage(job: job),
+        builder: (BuildContext context) => JobDetailPage(job: job.toDisplayMap()),
       ),
     );
   }
 
-  Future<void> _openApplyDialog(Map<String, String> job) async {
+  Future<void> _openApplyDialog(Job job) async {
     final bool? didApply = await showDialog<bool>(
       context: context,
-      builder: (BuildContext context) => _ApplyJobDialog(job: job),
+      builder: (BuildContext context) => _ApplyJobDialog(job: job.toDisplayMap()),
     );
 
     if (didApply == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Application submitted for ${job['title']}'),
+          content: Text('Application submitted for ${job.title}'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -197,7 +207,7 @@ class _JobListingPageState extends State<JobListingPage> {
       );
     }
 
-    final List<Map<String, String>> jobs = _filteredJobs;
+    final List<Job> jobs = _filteredJobs;
     final String seekerSkills =
         MockProfileStore.jobSeekerProfile['Skills'] ?? '';
 

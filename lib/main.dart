@@ -19,6 +19,7 @@ import 'pages/ussd_simulation.dart';
 import 'services/auth_service.dart';
 import 'theme/app_theme.dart';
 import 'utils/debug_logger.dart';
+import 'utils/role_utils.dart';
 
 Future<void> main() async {
   DebugLogger.log('═════════════════════════════════════════');
@@ -35,7 +36,9 @@ Future<void> main() async {
     DebugLogger.step('Initializing Supabase via AuthService...');
     await AuthService.initialize();
     DebugLogger.success('Supabase initialized successfully');
-    DebugLogger.info('Supabase client ready: ${Supabase.instance.client.toString()}');
+    DebugLogger.info(
+      'Supabase client ready: ${Supabase.instance.client.toString()}',
+    );
   } catch (e) {
     DebugLogger.error('FATAL ERROR during initialization: $e');
     rethrow;
@@ -86,7 +89,8 @@ class _JobForAllAppState extends State<JobForAllApp> {
         return;
       }
 
-      final UserProfile? profile = await AuthService.instance.tryRestoreSession();
+      final UserProfile? profile = await AuthService.instance
+          .tryRestoreSession();
       final String sessionInfo = profile != null
           ? 'YES (${profile.email} - ${profile.role})'
           : 'NO (null)';
@@ -95,6 +99,12 @@ class _JobForAllAppState extends State<JobForAllApp> {
       if (!mounted) {
         DebugLogger.warning('Widget no longer mounted, skipping setState');
         return;
+      }
+
+      // CRITICAL: Set RoleUtils BEFORE setState so HomePage can access the role/tabs
+      if (profile != null) {
+        DebugLogger.info('Setting RoleUtils from profile: role=${profile.role}');
+        RoleUtils.setSession(profile: profile);
       }
 
       setState(() {
@@ -124,7 +134,9 @@ class _JobForAllAppState extends State<JobForAllApp> {
 
   @override
   Widget build(BuildContext context) {
-    DebugLogger.ui('JobForAllApp.build() - isBootstrapping=$_isBootstrapping, isLoggedIn=$_isLoggedIn');
+    DebugLogger.ui(
+      'JobForAllApp.build() - isBootstrapping=$_isBootstrapping, isLoggedIn=$_isLoggedIn',
+    );
 
     if (_isBootstrapping) {
       return MaterialApp(
@@ -185,52 +197,29 @@ class _JobForAllAppState extends State<JobForAllApp> {
     }
 
     DebugLogger.target(
-      'Routing to: ${_isLoggedIn ? HomePage.routeName : LandingPage.routeName}',
+      'Routing to: ${_isLoggedIn ? 'HomePage' : 'LandingPage'}',
     );
 
+    // Use home: instead of initialRoute to avoid Flutter Web URL conflicts.
+    // When the browser reloads, Flutter Web tries to match the current URL
+    // against initialRoute — if it doesn't match a named route exactly,
+    // the framework crashes. Using home: bypasses URL-based routing entirely
+    // and always renders the correct widget based on session state.
     return MaterialApp(
       title: 'Job For All',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.build(),
-      initialRoute: _isLoggedIn ? HomePage.routeName : LandingPage.routeName,
+      home: _isLoggedIn
+          ? HomePage(onLogout: () => _updateLoginStatus(false))
+          : const LandingPage(),
       onGenerateRoute: _onGenerateRoute,
-      routes: <String, WidgetBuilder>{
-        LandingPage.routeName: (_) {
-          DebugLogger.routing('Routing to LandingPage');
-          return const LandingPage();
-        },
-        LoginPage.routeName: (_) {
-          DebugLogger.routing('Routing to LoginPage');
-          return LoginPage(onLoginSuccess: () => _updateLoginStatus(true));
-        },
-        SignupPage.routeName: (_) {
-          DebugLogger.routing('Routing to SignupPage');
-          return SignupPage(
-            onAuthSuccess: () => _updateLoginStatus(true),
-          );
-        },
-        HomePage.routeName: (_) {
-          DebugLogger.routing('Routing to HomePage');
-          return HomePage(
-            onLogout: () => _updateLoginStatus(false),
-          );
-        },
-        JobSeekerProfile.routeName: (_) => const JobSeekerProfile(),
-        EmployerProfile.routeName: (_) => const EmployerProfile(),
-        JobPostingPage.routeName: (_) => const JobPostingPage(),
-        JobListingPage.routeName: (_) => const JobListingPage(),
-        ApplicantsPage.routeName: (_) => const ApplicantsPage(),
-        AdminDashboard.routeName: (_) => const AdminDashboard(),
-        PaymentPage.routeName: (_) => const PaymentPage(),
-        UssdSimulationPage.routeName: (_) => const UssdSimulationPage(),
-        BlogPage.routeName: (_) => const BlogPage(),
-        PrivacyPage.routeName: (_) => const PrivacyPage(),
-      },
     );
   }
 
   Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
     final Object? args = settings.arguments;
+
+    DebugLogger.routing('onGenerateRoute: ${settings.name}');
 
     if (settings.name == HomePage.routeName) {
       final String? tabKey = args is HomePageArgs ? args.initialTabKey : null;
@@ -243,6 +232,70 @@ class _JobForAllAppState extends State<JobForAllApp> {
       );
     }
 
-    return null;
+    if (settings.name == LandingPage.routeName) {
+      return MaterialPageRoute<void>(builder: (_) => const LandingPage());
+    }
+
+    if (settings.name == LoginPage.routeName) {
+      return MaterialPageRoute<void>(
+        builder: (_) =>
+            LoginPage(onLoginSuccess: () => _updateLoginStatus(true)),
+      );
+    }
+
+    if (settings.name == SignupPage.routeName) {
+      return MaterialPageRoute<void>(
+        builder: (_) =>
+            SignupPage(onAuthSuccess: () => _updateLoginStatus(true)),
+      );
+    }
+
+    if (settings.name == JobSeekerProfile.routeName) {
+      return MaterialPageRoute<void>(builder: (_) => const JobSeekerProfile());
+    }
+
+    if (settings.name == EmployerProfile.routeName) {
+      return MaterialPageRoute<void>(builder: (_) => const EmployerProfile());
+    }
+
+    if (settings.name == JobPostingPage.routeName) {
+      return MaterialPageRoute<void>(builder: (_) => const JobPostingPage());
+    }
+
+    if (settings.name == JobListingPage.routeName) {
+      return MaterialPageRoute<void>(builder: (_) => const JobListingPage());
+    }
+
+    if (settings.name == ApplicantsPage.routeName) {
+      return MaterialPageRoute<void>(builder: (_) => const ApplicantsPage());
+    }
+
+    if (settings.name == AdminDashboard.routeName) {
+      return MaterialPageRoute<void>(builder: (_) => const AdminDashboard());
+    }
+
+    if (settings.name == PaymentPage.routeName) {
+      return MaterialPageRoute<void>(builder: (_) => const PaymentPage());
+    }
+
+    if (settings.name == UssdSimulationPage.routeName) {
+      return MaterialPageRoute<void>(
+        builder: (_) => const UssdSimulationPage(),
+      );
+    }
+
+    if (settings.name == BlogPage.routeName) {
+      return MaterialPageRoute<void>(builder: (_) => const BlogPage());
+    }
+
+    if (settings.name == PrivacyPage.routeName) {
+      return MaterialPageRoute<void>(builder: (_) => const PrivacyPage());
+    }
+
+    // Unknown route — always safe fallback
+    DebugLogger.warning(
+      'Unknown route "${settings.name}" — showing LandingPage',
+    );
+    return MaterialPageRoute<void>(builder: (_) => const LandingPage());
   }
 }
