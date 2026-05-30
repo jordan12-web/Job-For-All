@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/mock_job_store.dart';
 import '../data/mock_notification_store.dart';
 import '../data/mock_profile_store.dart';
+import '../models/job.dart';
 import '../utils/matching_utils.dart';
 import '../widgets/common_button.dart';
 import '../widgets/common_text_field.dart';
@@ -67,10 +68,26 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
   }
 
   void _openJobDetails(Map<String, String> job) {
+    // Convert display map to Job model so JobDetailPage receives
+    // the correct type. Mock recommended jobs use Map<String,String>
+    // so we construct a Job from the map fields here.
+    final Job jobModel = Job(
+      id: job['id'] ?? '',
+      employerId: '',
+      title: job['title'] ?? 'Untitled',
+      description: job['description'] ?? '',
+      requirements: job['requirements'] ?? '',
+      location: job['location'],
+      type: job['type'],
+      company: job['company'],
+      status: job['status'] ?? 'Approved',
+      createdAt: DateTime.now(),
+    );
+
     Navigator.push(
       context,
       MaterialPageRoute<void>(
-        builder: (BuildContext context) => JobDetailPage(job: job),
+        builder: (BuildContext context) => JobDetailPage(job: jobModel),
       ),
     );
   }

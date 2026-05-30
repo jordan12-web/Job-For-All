@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/user_profile.dart';
 import '../pages/admin_dashboard.dart';
+import '../pages/home_page.dart';
 import '../pages/employer_profile.dart';
 import '../pages/job_listing_page.dart';
 import '../pages/login_page.dart';
@@ -101,10 +102,7 @@ class AuthService {
     }
 
     DebugLogger.info('Session found for user: ${user.id}');
-    final UserProfile? profile = await _fetchUserProfile(
-      user.id,
-      accessToken: session.accessToken,
-    );
+    final UserProfile? profile = await _fetchUserProfile(user.id);
 
     if (profile == null) {
       DebugLogger.error('Profile not found during session restore: ${user.id}');
@@ -262,15 +260,13 @@ class AuthService {
         );
       }
 
-      final String accessToken = response.session!.accessToken;
       DebugLogger.info('Auth OK: ${user.id}');
-      DebugLogger.info('Access token obtained: ${accessToken.substring(0, 20)}...');
-      DebugLogger.step('Fetching profile with explicit token...');
+      DebugLogger.step('Fetching profile...');
 
-      final UserProfile? profile = await _fetchUserProfile(
-        user.id,
-        accessToken: accessToken,
-      );
+      // Small delay to ensure PostgREST picks up the new session token
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+
+      final UserProfile? profile = await _fetchUserProfile(user.id);
 
       if (profile == null) {
         DebugLogger.error('No profile row found for: ${user.id}');
@@ -316,106 +312,41 @@ class AuthService {
 
   // ── Private helpers ────────────────────────────────────────
 
-  Future<UserProfile?> _fetchUserProfile(
-    String userId, {
-    String? accessToken,
-  }) async {
+  Future<UserProfile?> _fetchUserProfile(String userId) async {
     if (userId.isEmpty) {
       DebugLogger.warning('Empty userId passed to _fetchUserProfile');
       return null;
     }
 
-    // Use provided token or fall back to current session token.
-    // Passing the token explicitly in the Authorization header guarantees
-    // RLS can resolve auth.uid() on Flutter Web, where the internal HTTP
-    // client may not have propagated the new session yet.
-    final String? token =
-        accessToken ?? _client.auth.currentSession?.accessToken;
-
     try {
       DebugLogger.step('DB fetch: users WHERE id=$userId');
-      final String tokenPreview = token != null ? '${token.substring(0, 20)}...' : 'NULL — RLS will block!';
-      DebugLogger.info('Using token: $tokenPreview');
 
       final Map<String, dynamic>? row = await _client
           .from(usersTable)
-          .select('id, email, name, role')
-          .eq('id', userId)
+          .select('id, email, name, role') // explicit columns — avoids
+          .eq('id', userId) // fetching cols that don't exist
           .maybeSingle();
-
-      // If the above still returns null due to Web header timing,
-      // retry once using a raw HTTP fetch with explicit Authorization header
-      if (row == null && token != null) {
-        DebugLogger.warning('First attempt null — retrying with explicit auth header...');
-        return await _fetchUserProfileWithToken(userId, token);
-      }
 
       if (row == null) {
         DebugLogger.warning('maybeSingle() returned null for id=$userId');
+        DebugLogger.warning('Either RLS blocked the row or it does not exist');
         return null;
       }
 
       DebugLogger.info('Raw row: $row');
       final UserProfile? profile = UserProfile.tryFromMap(row);
+
       if (profile == null) {
         DebugLogger.error('tryFromMap failed for row: $row');
       } else {
         DebugLogger.success('Parsed: ${profile.email} (${profile.role})');
       }
+
       return profile;
     } on PostgrestException catch (e) {
       DebugLogger.error(
         'PostgrestException: ${e.message} | code: ${e.code} | hint: ${e.hint}',
       );
-      return null;
-    }
-  }
-
-  /// Fallback fetch using a fresh SupabaseClient with the token
-  /// injected directly — bypasses any internal session-state timing issue.
-  Future<UserProfile?> _fetchUserProfileWithToken(
-    String userId,
-    String token,
-  ) async {
-    try {
-      DebugLogger.step('Fallback fetch with explicit token for: $userId');
-
-      // Use dotenv values (already loaded) to create a one-shot client
-      // with the Bearer token baked into its default headers.
-      final String url = dotenv.env['SUPABASE_URL'] ?? '';
-      final String anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
-
-      if (url.isEmpty || anonKey.isEmpty) {
-        DebugLogger.error('Cannot create fallback client: missing env vars');
-        return null;
-      }
-
-      final SupabaseClient tokenClient = SupabaseClient(
-        url,
-        anonKey,
-        headers: <String, String>{'Authorization': 'Bearer $token'},
-      );
-
-      final Map<String, dynamic>? row = await tokenClient
-          .from(usersTable)
-          .select('id, email, name, role')
-          .eq('id', userId)
-          .maybeSingle();
-
-      await tokenClient.dispose();
-
-      if (row == null) {
-        DebugLogger.error('Fallback fetch also returned null — RLS or missing row');
-        return null;
-      }
-
-      DebugLogger.success('Fallback fetch succeeded: $row');
-      return UserProfile.tryFromMap(row);
-    } on PostgrestException catch (e) {
-      DebugLogger.error('Fallback fetch PostgrestException: ${e.message}');
-      return null;
-    } catch (e) {
-      DebugLogger.error('Fallback fetch unexpected error: $e');
       return null;
     }
   }
@@ -441,17 +372,24 @@ class AuthService {
     return null;
   }
 
+  /// Always route to [HomePage] after login/signup.
+  /// The correct tab is communicated via [HomePageArgs].
+  /// This ensures the nav shell is always present — no standalone pages.
   String dashboardRouteForRole(String dbRole) {
-    final String route = switch (dbRole) {
-      'admin' => AdminDashboard.routeName,
-      'employer' => EmployerProfile.routeName,
-      _ => JobListingPage.routeName,
-    };
-    DebugLogger.info('Route for "$dbRole": $route');
-    return route;
+    DebugLogger.info('dashboardRouteForRole: always /home for dbRole=$dbRole');
+    return HomePage.routeName;
   }
 
-  Object? dashboardArgumentsForRole(String dbRole) => null;
+  /// Pass the initial tab key so [HomePage] opens the right section.
+  Object? dashboardArgumentsForRole(String dbRole) {
+    final String tabKey = switch (dbRole) {
+      'admin'    => 'admin',
+      'employer' => 'home',
+      _          => 'jobs',
+    };
+    DebugLogger.info('dashboardArgumentsForRole: tabKey=$tabKey for dbRole=$dbRole');
+    return HomePageArgs(initialTabKey: tabKey);
+  }
 
   String _mapAuthError(AuthException e) {
     final String msg = e.message.toLowerCase();

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+// Mock stores kept for apply dialog — will be replaced in applications sprint
 import '../data/mock_application_store.dart';
 import '../data/mock_job_store.dart';
 import '../data/mock_profile_store.dart';
@@ -54,21 +55,21 @@ class _JobListingPageState extends State<JobListingPage> {
     });
 
     try {
-      DebugLogger.step('JobListingPage: Loading jobs from Supabase');
+      DebugLogger.step('JobListingPage: fetching approved jobs from Supabase');
       final List<Job> jobs = await JobService.instance.fetchApprovedJobs();
-      
+
       if (!mounted) {
         return;
       }
 
-      DebugLogger.success('JobListingPage: Loaded ${jobs.length} jobs');
+      DebugLogger.success('JobListingPage: loaded ${jobs.length} jobs');
       setState(() {
         _allJobs = jobs;
         _isLoading = false;
       });
     } catch (e) {
-      DebugLogger.error('JobListingPage: Error loading jobs: $e');
-      
+      DebugLogger.error('JobListingPage: fetch failed: $e');
+
       if (!mounted) {
         return;
       }
@@ -80,6 +81,7 @@ class _JobListingPageState extends State<JobListingPage> {
     }
   }
 
+  // Build location filter options dynamically from fetched data
   List<String> get _locationOptions {
     final Set<String> locations = _allJobs
         .where((Job job) => job.location != null && job.location!.isNotEmpty)
@@ -90,34 +92,29 @@ class _JobListingPageState extends State<JobListingPage> {
 
   List<Job> get _filteredJobs {
     return _allJobs.where((Job job) {
-      final String title = job.title;
-      final String company = job.company ?? '';
-      final String location = job.location ?? '';
-      final String type = job.type ?? '';
-      final String description = job.description;
       final String keyword = _searchKeyword.toLowerCase();
 
-      final bool matchesKeyword =
-          keyword.isEmpty ||
-          title.toLowerCase().contains(keyword) ||
-          company.toLowerCase().contains(keyword) ||
-          description.toLowerCase().contains(keyword);
-      final bool matchesLocation =
-          _selectedLocation == 'All' || location == _selectedLocation;
-      final bool matchesType =
-          _selectedJobType == 'All' || type == _selectedJobType;
+      final bool matchesKeyword = keyword.isEmpty ||
+          job.title.toLowerCase().contains(keyword) ||
+          (job.company ?? '').toLowerCase().contains(keyword) ||
+          job.description.toLowerCase().contains(keyword);
 
-      return matchesKeyword &&
-          matchesLocation &&
-          matchesType;
+      final bool matchesLocation =
+          _selectedLocation == 'All' || job.location == _selectedLocation;
+
+      final bool matchesType =
+          _selectedJobType == 'All' || job.type == _selectedJobType;
+
+      return matchesKeyword && matchesLocation && matchesType;
     }).toList();
   }
 
+  // Navigate to JobDetailPage passing the full Job object
   void _openJobDetails(Job job) {
     Navigator.push(
       context,
       MaterialPageRoute<void>(
-        builder: (BuildContext context) => JobDetailPage(job: job.toDisplayMap()),
+        builder: (_) => JobDetailPage(job: job),
       ),
     );
   }
@@ -125,7 +122,7 @@ class _JobListingPageState extends State<JobListingPage> {
   Future<void> _openApplyDialog(Job job) async {
     final bool? didApply = await showDialog<bool>(
       context: context,
-      builder: (BuildContext context) => _ApplyJobDialog(job: job.toDisplayMap()),
+      builder: (_) => _ApplyJobDialog(job: job.toDisplayMap()),
     );
 
     if (didApply == true && mounted) {
@@ -261,6 +258,8 @@ class _JobListingPageState extends State<JobListingPage> {
                     FilterDropdown(
                       labelText: 'Job Type',
                       value: _selectedJobType,
+                      // Use MockJobStore.jobTypes so the filter stays in sync
+                      // with the job types defined in the system
                       options: <String>['All', ...MockJobStore.jobTypes],
                       onChanged: (String? value) {
                         if (value == null) {
@@ -315,21 +314,25 @@ class _JobListingPageState extends State<JobListingPage> {
                 )
               else
                 ...jobs.map(
-                  (Map<String, String> job) => Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: JobCard(
-                      job: job,
-                      companyLogo: MockCompanyLogo.forCompany(
-                        job['company'] ?? 'Company',
+                  (Job job) {
+                    // Convert once for widgets that use the display-map contract
+                    final Map<String, String> displayMap = job.toDisplayMap();
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: JobCard(
+                        job: displayMap,
+                        companyLogo: MockCompanyLogo.forCompany(
+                          job.company ?? 'Company',
+                        ),
+                        onTap: () => _openJobDetails(job),
+                        onApply: () => _openApplyDialog(job),
+                        isMatched: MatchingUtils.isJobMatch(
+                          seekerSkills: seekerSkills,
+                          job: displayMap,
+                        ),
                       ),
-                      onTap: () => _openJobDetails(job),
-                      onApply: () => _openApplyDialog(job),
-                      isMatched: MatchingUtils.isJobMatch(
-                        seekerSkills: seekerSkills,
-                        job: job,
-                      ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
             ],
           ),
@@ -339,7 +342,7 @@ class _JobListingPageState extends State<JobListingPage> {
   }
 }
 
-/// Mock company logos using initials and brand-like colors.
+/// Initials-based company logo widget — no styling changes, future-safe.
 class MockCompanyLogo extends StatelessWidget {
   const MockCompanyLogo({
     super.key,
@@ -362,7 +365,6 @@ class MockCompanyLogo extends StatelessWidget {
       const Color(0xFF1565C0),
     ];
     final Color bg = palette[hash % palette.length];
-
     return MockCompanyLogo(
       companyName: companyName,
       backgroundColor: bg.withValues(alpha: 0.15),
@@ -461,6 +463,7 @@ class _ApplyJobDialogState extends State<_ApplyJobDialog> {
       _errorMessage = null;
     });
 
+    // Placeholder delay — real DB insert wired in applications sprint
     await Future<void>.delayed(const Duration(milliseconds: 500));
 
     if (!mounted) {
