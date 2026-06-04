@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../data/mock_job_store.dart';
+import '../services/job_service.dart';
+import '../utils/debug_logger.dart';
 import '../widgets/common_button.dart';
 import '../widgets/common_text_field.dart';
 import '../widgets/filter_dropdown.dart';
-import 'job_listing_page.dart';
+import 'home_page.dart';
 
 class JobPostingPage extends StatefulWidget {
   const JobPostingPage({super.key});
@@ -16,13 +18,14 @@ class JobPostingPage extends StatefulWidget {
 }
 
 class _JobPostingPageState extends State<JobPostingPage> {
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _companyController = TextEditingController();
-  final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _titleController       = TextEditingController();
+  final TextEditingController _companyController     = TextEditingController();
+  final TextEditingController _locationController    = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _requirementsController = TextEditingController();
 
   String _selectedJobType = MockJobStore.jobTypes.first;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -34,40 +37,100 @@ class _JobPostingPageState extends State<JobPostingPage> {
     super.dispose();
   }
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+  /// Client-side validation — returns an error message or null if valid.
+  String? _validate() {
+    if (_titleController.text.trim().isEmpty) {
+      return 'Job title is required.';
+    }
+    if (_companyController.text.trim().isEmpty) {
+      return 'Company name is required.';
+    }
+    if (_locationController.text.trim().isEmpty) {
+      return 'Location is required.';
+    }
+    if (_descriptionController.text.trim().isEmpty) {
+      return 'Description is required.';
+    }
+    if (_requirementsController.text.trim().isEmpty) {
+      return 'Requirements are required.';
+    }
+    return null;
   }
 
-  // Saves to the mock job store and sends the user to the listing page.
-  void _saveJob() {
-    final String title = _titleController.text.trim();
-    final String company = _companyController.text.trim();
-    final String location = _locationController.text.trim();
-    final String description = _descriptionController.text.trim();
-    final String requirements = _requirementsController.text.trim();
-
-    if (title.isEmpty ||
-        company.isEmpty ||
-        location.isEmpty ||
-        description.isEmpty ||
-        requirements.isEmpty) {
-      _showMessage('Please complete all job posting fields.');
+  Future<void> _submitJob() async {
+    // ── Validate first — no network call if fields are empty ──────────
+    final String? validationError = _validate();
+    if (validationError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(validationError),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
       return;
     }
 
-    MockJobStore.addJob(
-      title: title,
-      company: company,
-      location: location,
-      type: _selectedJobType,
-      description: description,
-      requirements: requirements,
+    setState(() => _isSubmitting = true);
+
+    DebugLogger.step(
+      'JobPostingPage: submitting "${_titleController.text.trim()}"',
     );
 
-    _showMessage('Job posted successfully.');
-    Navigator.pushReplacementNamed(context, JobListingPage.routeName);
+    try {
+      await JobService.instance.createJob(
+        title:        _titleController.text.trim(),
+        company:      _companyController.text.trim(),
+        location:     _locationController.text.trim(),
+        type:         _selectedJobType,
+        description:  _descriptionController.text.trim(),
+        requirements: _requirementsController.text.trim(),
+      );
+
+      DebugLogger.success('Job posting successful');
+
+      if (!mounted) {
+        return;
+      }
+
+      // Show success and navigate back to employer dashboard (home)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Job submitted for review. It will appear once approved by an admin.',
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.green[700],
+          duration: const Duration(seconds: 4),
+        ),
+      );
+
+      // Go to home — the employer dashboard tab is already set by the session
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        HomePage.routeName,
+        (Route<dynamic> route) => false,
+      );
+    } catch (e) {
+      DebugLogger.error('JobPostingPage: createJob failed: $e');
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => _isSubmitting = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
   }
 
   @override
@@ -84,27 +147,33 @@ class _JobPostingPageState extends State<JobPostingPage> {
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
+                  children: <Widget>[
                     Text(
                       'Job Details',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style:
+                          Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Your listing will be reviewed before it goes live.',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 24),
                     CommonTextField(
                       controller: _titleController,
-                      labelText: 'Job Title',
+                      labelText: 'Job Title *',
                     ),
                     const SizedBox(height: 16),
                     CommonTextField(
                       controller: _companyController,
-                      labelText: 'Company',
+                      labelText: 'Company *',
                     ),
                     const SizedBox(height: 16),
                     CommonTextField(
                       controller: _locationController,
-                      labelText: 'Location',
+                      labelText: 'Location *',
                     ),
                     const SizedBox(height: 16),
                     FilterDropdown(
@@ -115,25 +184,37 @@ class _JobPostingPageState extends State<JobPostingPage> {
                         if (value == null) {
                           return;
                         }
-                        setState(() {
-                          _selectedJobType = value;
-                        });
+                        setState(() => _selectedJobType = value);
                       },
                     ),
                     const SizedBox(height: 16),
                     CommonTextField(
                       controller: _descriptionController,
-                      labelText: 'Description',
+                      labelText: 'Description *',
                       maxLines: 4,
                     ),
                     const SizedBox(height: 16),
                     CommonTextField(
                       controller: _requirementsController,
-                      labelText: 'Requirements',
+                      labelText: 'Requirements *',
                       maxLines: 4,
                     ),
-                    const SizedBox(height: 24),
-                    CommonButton(label: 'Save Job', onPressed: _saveJob),
+                    const SizedBox(height: 28),
+                    // ── Submit button ──────────────────────────────────────
+                    // Uses CommonButton to keep styling consistent with the
+                    // rest of the app — no style changes per sprint rules.
+                    // Shows a spinner inside the button while submitting.
+                    _isSubmitting
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        : CommonButton(
+                            label: 'Post Job',
+                            onPressed: _submitJob,
+                          ),
                   ],
                 ),
               ),

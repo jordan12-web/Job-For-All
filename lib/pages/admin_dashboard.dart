@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../data/mock_job_store.dart';
 import '../data/mock_profile_store.dart';
+import '../models/job.dart';
+import '../services/job_service.dart';
+import '../utils/debug_logger.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key, this.showAppBar = true});
@@ -15,7 +17,13 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
+  List<Job> _pendingJobs = <Job>[];
   bool _isLoading = true;
+  String? _loadError;
+
+  // Tracks which job IDs are currently being updated so we can show
+  // a per-row spinner without blocking the rest of the table.
+  final Set<String> _updatingIds = <String>{};
 
   @override
   void initState() {
@@ -24,10 +32,33 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _loadDashboard() async {
-    setState(() => _isLoading = true);
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-    if (mounted) {
-      setState(() => _isLoading = false);
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
+
+    try {
+      DebugLogger.step('AdminDashboard: loading pending jobs');
+      final List<Job> jobs = await JobService.instance.fetchPendingJobs();
+
+      if (!mounted) {
+        return;
+      }
+
+      DebugLogger.success('AdminDashboard: ${jobs.length} pending jobs');
+      setState(() {
+        _pendingJobs = jobs;
+        _isLoading = false;
+      });
+    } catch (e) {
+      DebugLogger.error('AdminDashboard load failed: $e');
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isLoading = false;
+        _loadError = 'Could not load pending jobs. Pull down to retry.';
+      });
     }
   }
 
@@ -72,51 +103,60 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return confirmed ?? false;
   }
 
-  Future<void> _approveJob(Map<String, String> job) async {
-    final bool confirmed = await _confirmAction(
-      title: 'Approve job post?',
-      message:
-          '“${job['title'] ?? 'This job'}” will become visible to job seekers.',
-      confirmLabel: 'Approve',
-    );
-    if (!confirmed) {
+  Future<void> _updateJobStatus(Job job, String newStatus) async {
+    if (_updatingIds.contains(job.id)) {
       return;
     }
 
-    setState(() => MockJobStore.updateJobStatus(job, 'Approved'));
-    _showMessage('Job approved.');
-  }
+    final String actionLabel =
+        newStatus == 'Approved' ? 'Approve' : 'Reject';
+    final String actionMessage = newStatus == 'Approved'
+        ? '"${job.title}" will become visible to job seekers.'
+        : 'Employers will need to revise "${job.title}".';
 
-  Future<void> _rejectJob(Map<String, String> job) async {
     final bool confirmed = await _confirmAction(
-      title: 'Reject job post?',
-      message: 'Employers will need to revise “${job['title'] ?? 'this job'}”.',
-      confirmLabel: 'Reject',
-      confirmColor: Colors.orange.shade800,
+      title: '$actionLabel job post?',
+      message: actionMessage,
+      confirmLabel: actionLabel,
+      confirmColor:
+          newStatus == 'Rejected' ? Colors.orange.shade800 : null,
     );
-    if (!confirmed) {
+
+    if (!confirmed || !mounted) {
       return;
     }
 
-    setState(() => MockJobStore.updateJobStatus(job, 'Rejected'));
-    _showMessage('Job rejected.');
-  }
+    setState(() => _updatingIds.add(job.id));
 
-  Future<void> _deleteJob(Map<String, String> job) async {
-    final bool confirmed = await _confirmAction(
-      title: 'Delete job post?',
-      message:
-          'This permanently removes “${job['title'] ?? 'this job'}”. This cannot be undone.',
-      confirmLabel: 'Delete',
-      confirmColor: Colors.redAccent,
+    DebugLogger.step(
+      'AdminDashboard: updating ${job.id} → $newStatus',
     );
-    if (!confirmed) {
+
+    final bool success = await JobService.instance.updateJobStatus(
+      jobId: job.id,
+      status: newStatus,
+    );
+
+    if (!mounted) {
       return;
     }
 
-    setState(() => MockJobStore.deleteJob(job));
-    _showMessage('Job deleted.');
+    setState(() {
+      _updatingIds.remove(job.id);
+      if (success) {
+        // Remove from pending list — it's no longer pending
+        _pendingJobs.removeWhere((Job j) => j.id == job.id);
+      }
+    });
+
+    if (success) {
+      _showMessage('Job $actionLabel.toLowerCase()d successfully.');
+    } else {
+      _showMessage('Failed to update job status.', isError: true);
+    }
   }
+
+  // ── Mock profile actions — unchanged from original ─────────────────────────
 
   Future<void> _verifyJobSeekerProfile() async {
     final bool confirmed = await _confirmAction(
@@ -127,7 +167,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     if (!confirmed) {
       return;
     }
-
     setState(MockProfileStore.markJobSeekerVerified);
     _showMessage('Job seeker profile marked as verified.');
   }
@@ -142,7 +181,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     if (!confirmed) {
       return;
     }
-
     setState(MockProfileStore.flagJobSeekerAccount);
     _showMessage('Job seeker account flagged.');
   }
@@ -157,68 +195,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
     if (!confirmed) {
       return;
     }
-
     setState(MockProfileStore.flagEmployerAccount);
     _showMessage('Employer account flagged.');
   }
 
   @override
   Widget build(BuildContext context) {
-    final Widget content = _isLoading
-        ? const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text(
-                  'Loading moderation tools…',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-          )
-        : RefreshIndicator(
-            onRefresh: _loadDashboard,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(24),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1100),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      Text(
-                        'Admin Moderation',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Review listings, verify profiles, and keep the platform trustworthy.',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[600],
-                            ),
-                      ),
-                      const SizedBox(height: 20),
-                      _ModerationTable(
-                        onApprove: _approveJob,
-                        onReject: _rejectJob,
-                        onDelete: _deleteJob,
-                      ),
-                      const SizedBox(height: 24),
-                      _VerificationPanel(
-                        onVerifyJobSeeker: _verifyJobSeekerProfile,
-                        onFlagJobSeeker: _flagJobSeekerAccount,
-                        onFlagEmployer: _flagEmployerAccount,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
+    final Widget content = RefreshIndicator(
+      onRefresh: _loadDashboard,
+      child: _buildBody(context),
+    );
 
     if (!widget.showAppBar) {
       return content;
@@ -229,18 +215,113 @@ class _AdminDashboardState extends State<AdminDashboard> {
       body: content,
     );
   }
+
+  Widget _buildBody(BuildContext context) {
+    if (_isLoading) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text(
+              'Loading moderation tools…',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_loadError != null) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(32),
+        children: <Widget>[
+          Icon(
+            Icons.error_outline,
+            size: 48,
+            color: Theme.of(context).colorScheme.error,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _loadError!,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: FilledButton.icon(
+              onPressed: _loadDashboard,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text(
+                'Admin Moderation',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Review listings, verify profiles, and keep the platform trustworthy.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 20),
+              // ── Job moderation table ──────────────────────────
+              _JobModerationTable(
+                pendingJobs: _pendingJobs,
+                updatingIds: _updatingIds,
+                onApprove: (Job job) => _updateJobStatus(job, 'Approved'),
+                onReject: (Job job) => _updateJobStatus(job, 'Rejected'),
+              ),
+              const SizedBox(height: 24),
+              // ── Profile verification panel (still mock) ───────
+              _VerificationPanel(
+                onVerifyJobSeeker: _verifyJobSeekerProfile,
+                onFlagJobSeeker: _flagJobSeekerAccount,
+                onFlagEmployer: _flagEmployerAccount,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class _ModerationTable extends StatelessWidget {
-  const _ModerationTable({
+// ── Job moderation table ─────────────────────────────────────────────────────
+
+class _JobModerationTable extends StatelessWidget {
+  const _JobModerationTable({
+    required this.pendingJobs,
+    required this.updatingIds,
     required this.onApprove,
     required this.onReject,
-    required this.onDelete,
   });
 
-  final Future<void> Function(Map<String, String> job) onApprove;
-  final Future<void> Function(Map<String, String> job) onReject;
-  final Future<void> Function(Map<String, String> job) onDelete;
+  final List<Job> pendingJobs;
+  final Set<String> updatingIds;
+  final Future<void> Function(Job job) onApprove;
+  final Future<void> Function(Job job) onReject;
 
   @override
   Widget build(BuildContext context) {
@@ -250,67 +331,130 @@ class _ModerationTable extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              'Job Posts',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
+            Row(
+              children: <Widget>[
+                Text(
+                  'Pending Job Posts',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(width: 12),
+                if (pendingJobs.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '${pendingJobs.length}',
+                      style: TextStyle(
+                        color: Colors.orange.shade800,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
+              ],
             ),
             const SizedBox(height: 16),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowColor: WidgetStateProperty.all(
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+            // ── Empty state ───────────────────────────────────
+            if (pendingJobs.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Column(
+                  children: <Widget>[
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 48,
+                      color: Colors.green[600],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'No pending jobs at this time.',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'All submissions have been reviewed.',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
                 ),
-                columns: const <DataColumn>[
-                  DataColumn(label: Text('Job Title')),
-                  DataColumn(label: Text('Employer')),
-                  DataColumn(label: Text('Status')),
-                  DataColumn(label: Text('Actions')),
-                ],
-                rows: MockJobStore.jobs.map((Map<String, String> job) {
-                  return DataRow(
-                    cells: <DataCell>[
-                      DataCell(Text(job['title'] ?? 'Untitled Job')),
-                      DataCell(Text(job['company'] ?? 'Unknown Employer')),
-                      DataCell(_StatusPill(status: job['status'] ?? 'Pending')),
-                      DataCell(
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            IconButton(
-                              tooltip: 'Approve',
-                              onPressed: () => onApprove(job),
-                              icon: const Icon(Icons.check_circle_outline),
-                              color: Colors.green.shade700,
-                            ),
-                            IconButton(
-                              tooltip: 'Reject',
-                              onPressed: () => onReject(job),
-                              icon: const Icon(Icons.cancel_outlined),
-                              color: Colors.orange.shade800,
-                            ),
-                            IconButton(
-                              tooltip: 'Delete',
-                              onPressed: () => onDelete(job),
-                              icon: const Icon(Icons.delete_outline),
-                              color: Colors.redAccent,
-                            ),
-                          ],
+              )
+            else
+              // ── Data table ────────────────────────────────────
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  headingRowColor: WidgetStateProperty.all(
+                    Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.08),
+                  ),
+                  columns: const <DataColumn>[
+                    DataColumn(label: Text('Job Title')),
+                    DataColumn(label: Text('Company')),
+                    DataColumn(label: Text('Location')),
+                    DataColumn(label: Text('Type')),
+                    DataColumn(label: Text('Actions')),
+                  ],
+                  rows: pendingJobs.map((Job job) {
+                    final bool isUpdating = updatingIds.contains(job.id);
+
+                    return DataRow(
+                      cells: <DataCell>[
+                        DataCell(Text(job.title)),
+                        DataCell(Text(job.company ?? '—')),
+                        DataCell(Text(job.location ?? '—')),
+                        DataCell(Text(job.type ?? '—')),
+                        DataCell(
+                          isUpdating
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    IconButton(
+                                      tooltip: 'Approve',
+                                      onPressed: () => onApprove(job),
+                                      icon: const Icon(
+                                        Icons.check_circle_outline,
+                                      ),
+                                      color: Colors.green.shade700,
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Reject',
+                                      onPressed: () => onReject(job),
+                                      icon: const Icon(Icons.cancel_outlined),
+                                      color: Colors.orange.shade800,
+                                    ),
+                                  ],
+                                ),
                         ),
-                      ),
-                    ],
-                  );
-                }).toList(),
+                      ],
+                    );
+                  }).toList(),
+                ),
               ),
-            ),
           ],
         ),
       ),
     );
   }
 }
+
+// ── Verification panel — unchanged from original ─────────────────────────────
 
 class _VerificationPanel extends StatelessWidget {
   const _VerificationPanel({
@@ -327,12 +471,13 @@ class _VerificationPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool hasJobSeekerProfile =
         MockProfileStore.jobSeekerProfile.isNotEmpty;
-    final bool hasEmployerProfile = MockProfileStore.employerProfile.isNotEmpty;
+    final bool hasEmployerProfile =
+        MockProfileStore.employerProfile.isNotEmpty;
     final bool isVerified =
         MockProfileStore.jobSeekerProfile['Verified'] == 'true';
     final String document =
         MockProfileStore.jobSeekerProfile['Verification Document'] ??
-        'No document uploaded';
+            'No document uploaded';
 
     return Card(
       child: Padding(
@@ -342,9 +487,10 @@ class _VerificationPanel extends StatelessWidget {
           children: <Widget>[
             Text(
               'Account Verification',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 12),
             Text('Job seeker document: $document'),
@@ -358,12 +504,14 @@ class _VerificationPanel extends StatelessWidget {
               runSpacing: 12,
               children: <Widget>[
                 FilledButton.icon(
-                  onPressed: hasJobSeekerProfile ? onVerifyJobSeeker : null,
+                  onPressed:
+                      hasJobSeekerProfile ? onVerifyJobSeeker : null,
                   icon: const Icon(Icons.verified_user),
                   label: const Text('Mark Profile Verified'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: hasJobSeekerProfile ? onFlagJobSeeker : null,
+                  onPressed:
+                      hasJobSeekerProfile ? onFlagJobSeeker : null,
                   icon: const Icon(Icons.flag_outlined),
                   label: const Text('Flag Job Seeker'),
                 ),
@@ -381,6 +529,8 @@ class _VerificationPanel extends StatelessWidget {
   }
 }
 
+// ── Status pill — unchanged from original ────────────────────────────────────
+
 class _StatusPill extends StatelessWidget {
   const _StatusPill({required this.status});
 
@@ -391,7 +541,7 @@ class _StatusPill extends StatelessWidget {
     final Color color = switch (status) {
       'Approved' => Colors.green,
       'Rejected' => Colors.redAccent,
-      _ => Colors.orange,
+      _          => Colors.orange,
     };
 
     return Container(
