@@ -23,13 +23,19 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-      TextEditingController();
-  final TextEditingController _companyNameController = TextEditingController();
-  final TextEditingController _contactInfoController = TextEditingController();
+  final TextEditingController _nameController            = TextEditingController();
+  final TextEditingController _emailController           = TextEditingController();
+  final TextEditingController _passwordController        = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _companyNameController     = TextEditingController();
+  final TextEditingController _contactInfoController     = TextEditingController();
+
+  final FocusNode _nameFocus            = FocusNode();
+  final FocusNode _companyFocus         = FocusNode();
+  final FocusNode _contactFocus         = FocusNode();
+  final FocusNode _emailFocus           = FocusNode();
+  final FocusNode _passwordFocus        = FocusNode();
+  final FocusNode _confirmPasswordFocus = FocusNode();
 
   String _selectedRole = RoleUtils.jobSeeker;
   String? _nameError;
@@ -56,6 +62,12 @@ class _SignupPageState extends State<SignupPage> {
     _confirmPasswordController.dispose();
     _companyNameController.dispose();
     _contactInfoController.dispose();
+    _nameFocus.dispose();
+    _companyFocus.dispose();
+    _contactFocus.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
+    _confirmPasswordFocus.dispose();
     super.dispose();
   }
 
@@ -314,6 +326,17 @@ class _SignupPageState extends State<SignupPage> {
             labelText: 'Full name',
             hasError: _nameError != null,
             enabled: !_isSubmitting,
+            focusNode: _nameFocus,
+            // Next depends on role — employer goes to company, seeker to email.
+            // We resolve this by pointing to a focus node that we'll request
+            // manually based on the current role selection.
+            onSubmitted: () {
+              if (_selectedRole == RoleUtils.employer) {
+                _companyFocus.requestFocus();
+              } else {
+                _emailFocus.requestFocus();
+              }
+            },
           ),
           ValidationMessage(message: _nameError),
           const SizedBox(height: 16),
@@ -324,6 +347,8 @@ class _SignupPageState extends State<SignupPage> {
               labelText: 'Company name',
               hasError: _companyNameError != null,
               enabled: !_isSubmitting,
+              focusNode: _companyFocus,
+              nextFocusNode: _contactFocus,
             ),
             ValidationMessage(message: _companyNameError),
             const SizedBox(height: 16),
@@ -332,6 +357,8 @@ class _SignupPageState extends State<SignupPage> {
               labelText: 'Contact information (email/phone)',
               hasError: _contactInfoError != null,
               enabled: !_isSubmitting,
+              focusNode: _contactFocus,
+              nextFocusNode: _emailFocus,
             ),
             ValidationMessage(message: _contactInfoError),
             const SizedBox(height: 16),
@@ -342,6 +369,9 @@ class _SignupPageState extends State<SignupPage> {
             keyboardType: TextInputType.emailAddress,
             hasError: _emailError != null,
             enabled: !_isSubmitting,
+            focusNode: _emailFocus,
+            nextFocusNode: _passwordFocus,
+            autofillHints: const <String>[AutofillHints.email],
           ),
           ValidationMessage(message: _emailError),
           const SizedBox(height: 16),
@@ -351,6 +381,9 @@ class _SignupPageState extends State<SignupPage> {
             obscureText: _obscurePassword,
             hasError: _passwordError != null,
             enabled: !_isSubmitting,
+            focusNode: _passwordFocus,
+            nextFocusNode: _confirmPasswordFocus,
+            autofillHints: const <String>[AutofillHints.newPassword],
             suffixIcon: IconButton(
               icon: Icon(
                 _obscurePassword
@@ -370,6 +403,9 @@ class _SignupPageState extends State<SignupPage> {
             obscureText: _obscureConfirm,
             hasError: _confirmPasswordError != null,
             enabled: !_isSubmitting,
+            focusNode: _confirmPasswordFocus,
+            onSubmitted: _signup,
+            autofillHints: const <String>[AutofillHints.newPassword],
             suffixIcon: IconButton(
               icon: Icon(
                 _obscureConfirm

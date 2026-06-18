@@ -22,8 +22,11 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _emailController    = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  final FocusNode _emailFocus    = FocusNode();
+  final FocusNode _passwordFocus = FocusNode();
 
   String? _emailError;
   String? _passwordError;
@@ -37,6 +40,8 @@ class _LoginPageState extends State<LoginPage> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
@@ -197,6 +202,9 @@ class _LoginPageState extends State<LoginPage> {
             keyboardType: TextInputType.emailAddress,
             hasError: _emailError != null,
             enabled: !_isLoading,
+            focusNode: _emailFocus,
+            nextFocusNode: _passwordFocus,
+            autofillHints: const <String>[AutofillHints.email],
           ),
           ValidationMessage(message: _emailError),
           const SizedBox(height: 16),
@@ -206,6 +214,9 @@ class _LoginPageState extends State<LoginPage> {
             obscureText: _obscurePassword,
             hasError: _passwordError != null,
             enabled: !_isLoading,
+            focusNode: _passwordFocus,
+            onSubmitted: _login,
+            autofillHints: const <String>[AutofillHints.password],
             suffixIcon: IconButton(
               icon: Icon(
                 _obscurePassword

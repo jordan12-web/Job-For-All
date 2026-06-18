@@ -52,11 +52,38 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _logout(BuildContext context) async {
+    // ── Confirmation dialog before signing out ──────────────
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: const Text('Sign out?'),
+        content: const Text(
+          'Are you sure you want to sign out of your account?',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
     await AuthService.instance.signOut();
     widget.onLogout();
+
     if (!context.mounted) {
       return;
     }
+
     Navigator.pushNamedAndRemoveUntil(
       context,
       LandingPage.routeName,

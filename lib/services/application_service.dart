@@ -153,9 +153,12 @@ class ApplicationService {
 
     try {
       // Select application columns + join jobs (filter + title) + join users
+      // Use jobs!inner to enforce the employer_id filter at the DB level.
+      // The join syntax jobs!applications_job_id_fkey ensures PostgREST
+      // uses the correct FK path when multiple FKs exist.
       final List<dynamic> data = await _client
           .from(_table)
-          .select('*, jobs!inner(title, employer_id), users(name, email)')
+          .select('*, jobs!inner(id, title, employer_id), users(name, email)')
           .eq('jobs.employer_id', employerId)
           .order('created_at', ascending: false);
 

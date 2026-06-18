@@ -108,24 +108,32 @@ class _TopNavBarState extends State<TopNavBar> {
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1200),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                    child: Stack(
+                      clipBehavior: Clip.none,
                       children: <Widget>[
-                        if (compact)
-                          _buildCompactHeader(roleItems)
-                        else
-                          _buildDesktopHeader(roleItems),
+                        // Main nav header — never shifts when panel opens
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            if (compact)
+                              _buildCompactHeader(roleItems)
+                            else
+                              _buildDesktopHeader(roleItems),
+                          ],
+                        ),
+                        // Notification panel floats OVER page content.
+                        // Clip.none + Positioned.fill lets it extend beyond
+                        // the navbar bounds without affecting layout.
                         if (_showNotifications &&
                             !widget.isGuestMode &&
-                            RoleUtils.isJobSeeker()) ...<Widget>[
-                          const SizedBox(height: 12),
-                          Align(
-                            alignment: Alignment.centerRight,
+                            RoleUtils.isJobSeeker())
+                          Positioned(
+                            top: compact ? 90 : 52,
+                            right: 0,
                             child: NotificationPanel(
                               onMarkAllRead: _markAllNotificationsRead,
                             ),
                           ),
-                        ],
                       ],
                     ),
                   ),

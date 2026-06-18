@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/mock_profile_store.dart';
 import '../models/job.dart';
 import '../services/job_service.dart';
+import '../theme/app_colors.dart';
 import '../utils/debug_logger.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -17,24 +19,35 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
-  List<Job> _pendingJobs = <Job>[];
-  bool _isLoading = true;
-  String? _loadError;
+  List<Job> _pendingJobs     = <Job>[];
+  bool      _isLoading       = true;
+  String?   _loadError;
 
-  // Tracks which job IDs are currently being updated so we can show
-  // a per-row spinner without blocking the rest of the table.
+  // Analytics counters
+  int _totalSeekers      = 0;
+  int _totalPendingJobs  = 0;
+  int _totalApplications = 0;
+  bool _analyticsLoading = true;
+
   final Set<String> _updatingIds = <String>{};
 
   @override
   void initState() {
     super.initState();
-    _loadDashboard();
+    _loadAll();
+  }
+
+  Future<void> _loadAll() async {
+    await Future.wait(<Future<void>>[
+      _loadDashboard(),
+      _loadAnalytics(),
+    ]);
   }
 
   Future<void> _loadDashboard() async {
     setState(() {
       _isLoading = true;
-      _loadError = null;
+      _loadError  = null;
     });
 
     try {
@@ -45,10 +58,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         return;
       }
 
-      DebugLogger.success('AdminDashboard: ${jobs.length} pending jobs');
       setState(() {
         _pendingJobs = jobs;
-        _isLoading = false;
+        _isLoading   = false;
       });
     } catch (e) {
       DebugLogger.error('AdminDashboard load failed: $e');
@@ -56,9 +68,53 @@ class _AdminDashboardState extends State<AdminDashboard> {
         return;
       }
       setState(() {
-        _isLoading = false;
-        _loadError = 'Could not load pending jobs. Pull down to retry.';
+        _isLoading  = false;
+        _loadError  = 'Could not load pending jobs. Pull down to retry.';
       });
+    }
+  }
+
+  Future<void> _loadAnalytics() async {
+    setState(() => _analyticsLoading = true);
+
+    try {
+      final SupabaseClient client = Supabase.instance.client;
+
+      // Parallel fetch of all three counts
+      final List<dynamic> results = await Future.wait(<Future<dynamic>>[
+        client
+            .from('users')
+            .select('id')
+            .eq('role', 'seeker'),
+        client
+            .from('jobs')
+            .select('id')
+            .eq('status', 'Pending'),
+        client
+            .from('applications')
+            .select('id'),
+      ]);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _totalSeekers      = (results[0] as List<dynamic>).length;
+        _totalPendingJobs  = (results[1] as List<dynamic>).length;
+        _totalApplications = (results[2] as List<dynamic>).length;
+        _analyticsLoading  = false;
+      });
+
+      DebugLogger.success(
+        'Analytics: seekers=$_totalSeekers pending=$_totalPendingJobs apps=$_totalApplications',
+      );
+    } catch (e) {
+      DebugLogger.error('Analytics fetch failed: $e');
+      if (!mounted) {
+        return;
+      }
+      setState(() => _analyticsLoading = false);
     }
   }
 
@@ -66,7 +122,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Theme.of(context).colorScheme.error : null,
+        backgroundColor: isError ? AppColors.error : null,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -108,18 +164,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
       return;
     }
 
-    final String actionLabel =
-        newStatus == 'Approved' ? 'Approve' : 'Reject';
-    final String actionMessage = newStatus == 'Approved'
+    final String label   = newStatus == 'Approved' ? 'Approve' : 'Reject';
+    final String message = newStatus == 'Approved'
         ? '"${job.title}" will become visible to job seekers.'
         : 'Employers will need to revise "${job.title}".';
 
     final bool confirmed = await _confirmAction(
-      title: '$actionLabel job post?',
-      message: actionMessage,
-      confirmLabel: actionLabel,
-      confirmColor:
-          newStatus == 'Rejected' ? Colors.orange.shade800 : null,
+      title:        '$label job post?',
+      message:      message,
+      confirmLabel: label,
+      confirmColor: newStatus == 'Rejected' ? Colors.orange.shade800 : null,
     );
 
     if (!confirmed || !mounted) {
@@ -128,12 +182,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     setState(() => _updatingIds.add(job.id));
 
-    DebugLogger.step(
-      'AdminDashboard: updating ${job.id} → $newStatus',
-    );
-
     final bool success = await JobService.instance.updateJobStatus(
-      jobId: job.id,
+      jobId:  job.id,
       status: newStatus,
     );
 
@@ -144,27 +194,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
     setState(() {
       _updatingIds.remove(job.id);
       if (success) {
-        // Remove from pending list — it's no longer pending
         _pendingJobs.removeWhere((Job j) => j.id == job.id);
+        // Refresh analytics count too
+        _totalPendingJobs = (_totalPendingJobs - 1).clamp(0, 999);
       }
     });
 
-    if (success) {
-      _showMessage('Job $actionLabel.toLowerCase()d successfully.');
-    } else {
-      _showMessage('Failed to update job status.', isError: true);
-    }
+    _showMessage(
+      success
+          ? 'Job ${newStatus.toLowerCase()} successfully.'
+          : 'Failed to update job status.',
+      isError: !success,
+    );
   }
 
-  // ── Mock profile actions — unchanged from original ─────────────────────────
+  // ── Mock profile actions — unchanged ────────────────────────────────────────
 
   Future<void> _verifyJobSeekerProfile() async {
-    final bool confirmed = await _confirmAction(
+    final bool ok = await _confirmAction(
       title: 'Verify job seeker?',
       message: 'Mark this profile as credential-verified for employers.',
       confirmLabel: 'Verify',
     );
-    if (!confirmed) {
+    if (!ok) {
       return;
     }
     setState(MockProfileStore.markJobSeekerVerified);
@@ -172,13 +224,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _flagJobSeekerAccount() async {
-    final bool confirmed = await _confirmAction(
+    final bool ok = await _confirmAction(
       title: 'Flag job seeker account?',
       message: 'The account will be marked for admin review.',
       confirmLabel: 'Flag account',
       confirmColor: Colors.orange.shade800,
     );
-    if (!confirmed) {
+    if (!ok) {
       return;
     }
     setState(MockProfileStore.flagJobSeekerAccount);
@@ -186,13 +238,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _flagEmployerAccount() async {
-    final bool confirmed = await _confirmAction(
+    final bool ok = await _confirmAction(
       title: 'Flag employer account?',
       message: 'The employer profile will be marked for admin review.',
       confirmLabel: 'Flag account',
       confirmColor: Colors.orange.shade800,
     );
-    if (!confirmed) {
+    if (!ok) {
       return;
     }
     setState(MockProfileStore.flagEmployerAccount);
@@ -202,7 +254,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   Widget build(BuildContext context) {
     final Widget content = RefreshIndicator(
-      onRefresh: _loadDashboard,
+      onRefresh: _loadAll,
       child: _buildBody(context),
     );
 
@@ -217,7 +269,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildBody(BuildContext context) {
-    if (_isLoading) {
+    if (_isLoading && _analyticsLoading) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -238,21 +290,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(32),
         children: <Widget>[
-          Icon(
-            Icons.error_outline,
-            size: 48,
-            color: Theme.of(context).colorScheme.error,
-          ),
+          Icon(Icons.error_outline, size: 48, color: AppColors.error),
           const SizedBox(height: 16),
           Text(
             _loadError!,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
+            style: const TextStyle(color: AppColors.error),
           ),
           const SizedBox(height: 16),
           Center(
             child: FilledButton.icon(
-              onPressed: _loadDashboard,
+              onPressed: _loadAll,
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
             ),
@@ -270,6 +318,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
+              // ── Page header ───────────────────────────────
               Text(
                 'Admin Moderation',
                 style: Theme.of(context)
@@ -277,32 +326,201 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     .headlineSmall
                     ?.copyWith(fontWeight: FontWeight.w800),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
                 'Review listings, verify profiles, and keep the platform trustworthy.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: Colors.grey[600]),
+                style: TextStyle(color: AppColors.textSecondary),
               ),
-              const SizedBox(height: 20),
-              // ── Job moderation table ──────────────────────────
+              const SizedBox(height: 24),
+
+              // ── Analytics summary ─────────────────────────
+              _AnalyticsSummary(
+                isLoading:         _analyticsLoading,
+                totalSeekers:      _totalSeekers,
+                totalPendingJobs:  _totalPendingJobs,
+                totalApplications: _totalApplications,
+              ),
+              const SizedBox(height: 24),
+
+              // ── Job moderation table ──────────────────────
               _JobModerationTable(
                 pendingJobs: _pendingJobs,
                 updatingIds: _updatingIds,
-                onApprove: (Job job) => _updateJobStatus(job, 'Approved'),
-                onReject: (Job job) => _updateJobStatus(job, 'Rejected'),
+                onApprove:   (Job job) => _updateJobStatus(job, 'Approved'),
+                onReject:    (Job job) => _updateJobStatus(job, 'Rejected'),
               ),
               const SizedBox(height: 24),
-              // ── Profile verification panel (still mock) ───────
+
+              // ── Verification panel (mock) ─────────────────
               _VerificationPanel(
                 onVerifyJobSeeker: _verifyJobSeekerProfile,
-                onFlagJobSeeker: _flagJobSeekerAccount,
-                onFlagEmployer: _flagEmployerAccount,
+                onFlagJobSeeker:   _flagJobSeekerAccount,
+                onFlagEmployer:    _flagEmployerAccount,
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Analytics summary ────────────────────────────────────────────────────────
+
+class _AnalyticsSummary extends StatelessWidget {
+  const _AnalyticsSummary({
+    required this.isLoading,
+    required this.totalSeekers,
+    required this.totalPendingJobs,
+    required this.totalApplications,
+  });
+
+  final bool isLoading;
+  final int  totalSeekers;
+  final int  totalPendingJobs;
+  final int  totalApplications;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool wide = constraints.maxWidth >= 640;
+
+        final List<Widget> tiles = <Widget>[
+          _StatTile(
+            label:     'Total Job Seekers',
+            value:     isLoading ? '—' : totalSeekers.toString(),
+            icon:      Icons.people_outline,
+            iconColor: AppColors.sky,
+            bgColor:   AppColors.skyLight,
+            isLoading: isLoading,
+          ),
+          _StatTile(
+            label:     'Pending Reviews',
+            value:     isLoading ? '—' : totalPendingJobs.toString(),
+            icon:      Icons.pending_actions_outlined,
+            iconColor: AppColors.warning,
+            bgColor:   const Color(0xFFFFFBEB),
+            isLoading: isLoading,
+          ),
+          _StatTile(
+            label:     'Total Applications',
+            value:     isLoading ? '—' : totalApplications.toString(),
+            icon:      Icons.assignment_outlined,
+            iconColor: AppColors.success,
+            bgColor:   const Color(0xFFF0FDF4),
+            isLoading: isLoading,
+          ),
+        ];
+
+        if (wide) {
+          return Row(
+            children: tiles
+                .map(
+                  (Widget t) => Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: t,
+                    ),
+                  ),
+                )
+                .toList()
+              ..[tiles.length - 1] = Expanded(child: tiles.last),
+          );
+        }
+
+        return Column(
+          children: tiles
+              .map(
+                (Widget t) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: t,
+                ),
+              )
+              .toList(),
+        );
+      },
+    );
+  }
+}
+
+class _StatTile extends StatelessWidget {
+  const _StatTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.iconColor,
+    required this.bgColor,
+    required this.isLoading,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color iconColor;
+  final Color bgColor;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color:        Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color:      Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset:     const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width:  48,
+            height: 48,
+            decoration: BoxDecoration(
+              color:        bgColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: iconColor, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  label,
+                  style: TextStyle(
+                    color:      AppColors.textSecondary,
+                    fontSize:   13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width:  40,
+                        child: LinearProgressIndicator(),
+                      )
+                    : Text(
+                        value,
+                        style: const TextStyle(
+                          fontSize:   28,
+                          fontWeight: FontWeight.w700,
+                          color:      AppColors.textPrimary,
+                          height:     1,
+                        ),
+                      ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -318,10 +536,10 @@ class _JobModerationTable extends StatelessWidget {
     required this.onReject,
   });
 
-  final List<Job> pendingJobs;
-  final Set<String> updatingIds;
-  final Future<void> Function(Job job) onApprove;
-  final Future<void> Function(Job job) onReject;
+  final List<Job>      pendingJobs;
+  final Set<String>    updatingIds;
+  final Future<void> Function(Job) onApprove;
+  final Future<void> Function(Job) onReject;
 
   @override
   Widget build(BuildContext context) {
@@ -348,13 +566,13 @@ class _JobModerationTable extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.15),
+                      color:        Colors.orange.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
                       '${pendingJobs.length}',
                       style: TextStyle(
-                        color: Colors.orange.shade800,
+                        color:      Colors.orange.shade800,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -362,7 +580,6 @@ class _JobModerationTable extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            // ── Empty state ───────────────────────────────────
             if (pendingJobs.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
@@ -370,8 +587,8 @@ class _JobModerationTable extends StatelessWidget {
                   children: <Widget>[
                     Icon(
                       Icons.check_circle_outline,
-                      size: 48,
-                      color: Colors.green[600],
+                      size:  48,
+                      color: AppColors.success,
                     ),
                     const SizedBox(height: 12),
                     const Text(
@@ -381,21 +598,17 @@ class _JobModerationTable extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       'All submissions have been reviewed.',
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(color: AppColors.textSecondary),
                     ),
                   ],
                 ),
               )
             else
-              // ── Data table ────────────────────────────────────
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: DataTable(
                   headingRowColor: WidgetStateProperty.all(
-                    Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.08),
+                    AppColors.navy.withValues(alpha: 0.05),
                   ),
                   columns: const <DataColumn>[
                     DataColumn(label: Text('Job Title')),
@@ -405,19 +618,17 @@ class _JobModerationTable extends StatelessWidget {
                     DataColumn(label: Text('Actions')),
                   ],
                   rows: pendingJobs.map((Job job) {
-                    final bool isUpdating = updatingIds.contains(job.id);
-
+                    final bool updating = updatingIds.contains(job.id);
                     return DataRow(
                       cells: <DataCell>[
                         DataCell(Text(job.title)),
-                        DataCell(Text(job.company ?? '—')),
+                        DataCell(Text(job.company  ?? '—')),
                         DataCell(Text(job.location ?? '—')),
-                        DataCell(Text(job.type ?? '—')),
+                        DataCell(Text(job.type     ?? '—')),
                         DataCell(
-                          isUpdating
+                          updating
                               ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
+                                  width: 24, height: 24,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                   ),
@@ -426,18 +637,18 @@ class _JobModerationTable extends StatelessWidget {
                                   mainAxisSize: MainAxisSize.min,
                                   children: <Widget>[
                                     IconButton(
-                                      tooltip: 'Approve',
+                                      tooltip:  'Approve',
                                       onPressed: () => onApprove(job),
                                       icon: const Icon(
                                         Icons.check_circle_outline,
                                       ),
-                                      color: Colors.green.shade700,
+                                      color: AppColors.success,
                                     ),
                                     IconButton(
-                                      tooltip: 'Reject',
+                                      tooltip:  'Reject',
                                       onPressed: () => onReject(job),
                                       icon: const Icon(Icons.cancel_outlined),
-                                      color: Colors.orange.shade800,
+                                      color: AppColors.warning,
                                     ),
                                   ],
                                 ),
@@ -454,7 +665,7 @@ class _JobModerationTable extends StatelessWidget {
   }
 }
 
-// ── Verification panel — unchanged from original ─────────────────────────────
+// ── Verification panel — unchanged ────────────────────────────────────────────
 
 class _VerificationPanel extends StatelessWidget {
   const _VerificationPanel({
@@ -469,10 +680,8 @@ class _VerificationPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool hasJobSeekerProfile =
-        MockProfileStore.jobSeekerProfile.isNotEmpty;
-    final bool hasEmployerProfile =
-        MockProfileStore.employerProfile.isNotEmpty;
+    final bool seekerExists = MockProfileStore.jobSeekerProfile.isNotEmpty;
+    final bool employerExists = MockProfileStore.employerProfile.isNotEmpty;
     final bool isVerified =
         MockProfileStore.jobSeekerProfile['Verified'] == 'true';
     final String document =
@@ -504,20 +713,18 @@ class _VerificationPanel extends StatelessWidget {
               runSpacing: 12,
               children: <Widget>[
                 FilledButton.icon(
-                  onPressed:
-                      hasJobSeekerProfile ? onVerifyJobSeeker : null,
-                  icon: const Icon(Icons.verified_user),
+                  onPressed: seekerExists ? onVerifyJobSeeker : null,
+                  icon:  const Icon(Icons.verified_user),
                   label: const Text('Mark Profile Verified'),
                 ),
                 OutlinedButton.icon(
-                  onPressed:
-                      hasJobSeekerProfile ? onFlagJobSeeker : null,
-                  icon: const Icon(Icons.flag_outlined),
+                  onPressed: seekerExists ? onFlagJobSeeker : null,
+                  icon:  const Icon(Icons.flag_outlined),
                   label: const Text('Flag Job Seeker'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: hasEmployerProfile ? onFlagEmployer : null,
-                  icon: const Icon(Icons.business_outlined),
+                  onPressed: employerExists ? onFlagEmployer : null,
+                  icon:  const Icon(Icons.business_outlined),
                   label: const Text('Flag Employer'),
                 ),
               ],
@@ -529,8 +736,6 @@ class _VerificationPanel extends StatelessWidget {
   }
 }
 
-// ── Status pill — unchanged from original ────────────────────────────────────
-
 class _StatusPill extends StatelessWidget {
   const _StatusPill({required this.status});
 
@@ -539,17 +744,16 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color color = switch (status) {
-      'Approved' => Colors.green,
-      'Rejected' => Colors.redAccent,
-      _          => Colors.orange,
+      'Approved' => AppColors.success,
+      'Rejected' => AppColors.error,
+      _          => AppColors.warning,
     };
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color:        color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color),
+        border:       Border.all(color: color),
       ),
       child: Text(
         status,
