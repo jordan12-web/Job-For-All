@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 
-/// Displays a single job listing.
+/// Displays a single job listing using the "Clinical" design system.
 ///
-/// Polish phase additions:
-/// - Hover elevation lift via [_HoverCard]
-/// - Sky-blue accent border when [isMatched]
-/// - Subtle shadow on hover
+/// Card token: white background, 24px padding, 12px radius.
+/// Metadata (date/location) uses Secondary (#4F6B7C).
+/// Tertiary (#0E9F8E) is reserved for the Apply button only —
+/// no other element on this card uses the accent colour.
+/// Hover = elevation shift only. No colour change, no flash.
 class JobCard extends StatelessWidget {
   const JobCard({
     super.key,
@@ -21,91 +22,126 @@ class JobCard extends StatelessWidget {
   final Map<String, String> job;
   final VoidCallback onTap;
   final VoidCallback onApply;
+
+  /// Recommended-job indicator. Rendered as a neutral label, NOT
+  /// in the tertiary accent colour — Apply remains the only accent use.
   final bool isMatched;
   final Widget? companyLogo;
 
   String _shortDescription(String description) {
-    if (description.length <= 120) {
+    if (description.length <= 140) {
       return description;
     }
-    return '${description.substring(0, 117)}...';
+    return '${description.substring(0, 137)}...';
   }
 
   @override
   Widget build(BuildContext context) {
-    final String title       = job['title']       ?? 'Untitled Job';
-    final String company     = job['company']     ?? 'Unknown Company';
-    final String location    = job['location']    ?? 'Unknown Location';
-    final String type        = job['type']        ?? 'Unspecified';
+    final String title = job['title'] ?? 'Untitled Job';
+    final String company = job['company'] ?? 'Unknown Company';
+    final String location = job['location'] ?? 'Unknown Location';
+    final String type = job['type'] ?? 'Unspecified';
     final String description = job['description'] ?? '';
+    final String postedDate = job['createdAt'] ?? job['date'] ?? '';
 
-    return _HoverCard(
+    return _ClinicalHoverCard(
       onTap: onTap,
-      borderColor: isMatched ? AppColors.sky : Colors.transparent,
-      borderWidth: isMatched ? 2 : 0,
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24), // Clinical card token: 24px
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
+            // ── Header row: logo + title + type tag ─────────────
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 if (companyLogo != null) ...<Widget>[
                   companyLogo!,
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 16),
                 ],
                 Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
+                          color: AppColors.primary,
                         ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        company,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.secondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.end,
-                  children: <Widget>[
-                    if (isMatched)
-                      Chip(
-                        avatar: const Icon(
-                          Icons.auto_awesome,
-                          size: 14,
-                          color: AppColors.navy,
-                        ),
-                        label: const Text('Recommended'),
-                      ),
-                    Chip(label: Text(type)),
-                  ],
-                ),
+                _MetaTag(label: type),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              '$company · $location',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w500,
+            const SizedBox(height: 16),
+
+            // ── Metadata row: location + date — Secondary colour ──
+            Row(
+              children: <Widget>[
+                const Icon(
+                  Icons.place_outlined,
+                  size: 15,
+                  color: AppColors.secondary,
+                ),
+                const SizedBox(width: 4),
+                Text(location, style: Theme.of(context).textTheme.labelMedium),
+                if (postedDate.isNotEmpty) ...<Widget>[
+                  const SizedBox(width: 16),
+                  const Icon(
+                    Icons.calendar_today_outlined,
+                    size: 13,
+                    color: AppColors.secondary,
                   ),
+                  const SizedBox(width: 4),
+                  Text(
+                    postedDate,
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                ],
+                if (isMatched) ...<Widget>[
+                  const SizedBox(width: 16),
+                  const Icon(
+                    Icons.bookmark_border,
+                    size: 14,
+                    color: AppColors.secondary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Recommended',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+
+            // ── Description ───────────────────────────────────
             Text(
               _shortDescription(description),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+                color: AppColors.secondary,
+                height: 1.5,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
+
+            // ── The single accent action on this card ──────────
             Align(
               alignment: Alignment.centerRight,
-              child: FilledButton.icon(
+              child: FilledButton(
                 onPressed: onApply,
-                icon: const Icon(Icons.send, size: 16),
-                label: const Text('Apply'),
+                child: const Text('Apply'),
               ),
             ),
           ],
@@ -115,26 +151,53 @@ class JobCard extends StatelessWidget {
   }
 }
 
-/// Card wrapper that lifts on hover.
-/// Stateful so it can track hover state locally.
-class _HoverCard extends StatefulWidget {
-  const _HoverCard({
-    required this.child,
-    required this.onTap,
-    this.borderColor = Colors.transparent,
-    this.borderWidth = 0,
-  });
+/// Neutral, non-accent tag for job type (Full-time / Part-time).
+/// Deliberately NOT using the tertiary colour — Apply is the only
+/// accent element on the card per the Clinical single-action rule.
+class _MetaTag extends StatelessWidget {
+  const _MetaTag({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontFamily: 'IBM Plex Mono',
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: AppColors.secondary,
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
+  }
+}
+
+/// Clinical hover card — elevation shift ONLY.
+/// No border colour change, no accent flash, no scale jump.
+/// This is a deliberate constraint from the design system: hover
+/// must read as "this is interactive" without drawing attention
+/// away from the single accent action inside the card.
+class _ClinicalHoverCard extends StatefulWidget {
+  const _ClinicalHoverCard({required this.child, required this.onTap});
 
   final Widget child;
   final VoidCallback onTap;
-  final Color borderColor;
-  final double borderWidth;
 
   @override
-  State<_HoverCard> createState() => _HoverCardState();
+  State<_ClinicalHoverCard> createState() => _ClinicalHoverCardState();
 }
 
-class _HoverCardState extends State<_HoverCard> {
+class _ClinicalHoverCardState extends State<_ClinicalHoverCard> {
   bool _hovered = false;
 
   @override
@@ -143,37 +206,31 @@ class _HoverCardState extends State<_HoverCard> {
       duration: const Duration(milliseconds: 150),
       curve: Curves.easeOut,
       decoration: BoxDecoration(
-        color:        Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: _hovered ? AppColors.sky : widget.borderColor,
-          width: _hovered ? 1.5 : widget.borderWidth,
-        ),
+        color: AppColors.surfaceWhite,
+        borderRadius: BorderRadius.circular(12), // Clinical card token: 12px
+        border: Border.all(color: AppColors.border),
         boxShadow: _hovered
             ? <BoxShadow>[
                 BoxShadow(
-                  color:       AppColors.navy.withValues(alpha: 0.08),
-                  blurRadius:  16,
+                  color: AppColors.primary.withValues(alpha: 0.10),
+                  blurRadius: 20,
                   spreadRadius: 0,
-                  offset:      const Offset(0, 6),
+                  offset: const Offset(0, 8),
                 ),
               ]
             : <BoxShadow>[
                 BoxShadow(
-                  color:      Colors.black.withValues(alpha: 0.04),
+                  color: AppColors.primary.withValues(alpha: 0.03),
                   blurRadius: 4,
-                  offset:     const Offset(0, 2),
+                  offset: const Offset(0, 1),
                 ),
               ],
       ),
       child: MouseRegion(
-        onEnter:  (_) => setState(() => _hovered = true),
-        onExit:   (_) => setState(() => _hovered = false),
-        cursor:   SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: widget.child,
-        ),
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(onTap: widget.onTap, child: widget.child),
       ),
     );
   }

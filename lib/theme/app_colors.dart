@@ -1,70 +1,74 @@
 import 'package:flutter/material.dart';
 
-/// Brand palette — Navy/Sky Blue "Trust & Professionalism" theme.
+/// "Clinical" design system palette.
+///
+/// Hospital-grade legibility, extreme clarity, single-action focus.
+/// Flat colours only — no gradients, no alternate accents.
 abstract final class AppColors {
-  // ── Primary palette ──────────────────────────────────────
-  /// Navy blue — primary structure colour
-  static const Color navy     = Color(0xFF1A1A40);
-  static const Color navyMid  = Color(0xFF252560);
-  static const Color navyLight = Color(0xFF2E2E7A);
+  // ── Clinical tokens ──────────────────────────────────────
+  /// Background / neutral surface
+  static const Color background = Color(0xFFF1F5F7);
 
-  /// Sky blue — accent / interactive colour
-  static const Color sky      = Color(0xFF00A8E8);
-  static const Color skyDark  = Color(0xFF0086BB);
-  static const Color skyLight = Color(0xFFE6F7FD);
+  /// Primary — headlines and body text
+  static const Color primary = Color(0xFF0F2A3B);
+
+  /// Secondary — metadata, borders, supporting text
+  static const Color secondary = Color(0xFF4F6B7C);
+
+  /// Tertiary — THE ONLY action accent colour in the entire app.
+  /// Reserve for exactly one primary action per screen
+  /// (e.g. Apply, Save, Approve). Do not use for decoration.
+  static const Color tertiary = Color(0xFF0E9F8E);
 
   // ── Neutrals ─────────────────────────────────────────────
-  static const Color surface      = Color(0xFFF8F9FA);
+  static const Color surface      = Color(0xFFF1F5F7);
   static const Color surfaceWhite = Color(0xFFFFFFFF);
-  static const Color border       = Color(0xFFE2E8F0);
-  static const Color borderFocus  = Color(0xFF00A8E8);
+  static const Color border       = Color(0xFFD7E0E5);
+  static const Color borderFocus  = tertiary;
 
   // ── Text ─────────────────────────────────────────────────
-  static const Color textPrimary   = Color(0xFF0D0D2B);
-  static const Color textSecondary = Color(0xFF64748B);
-  static const Color textHint      = Color(0xFF94A3B8);
+  static const Color textPrimary   = primary;
+  static const Color textSecondary = secondary;
+  static const Color textHint      = Color(0xFF8FA3AD);
 
-  // ── Semantic ─────────────────────────────────────────────
-  static const Color success = Color(0xFF16A34A);
-  static const Color warning = Color(0xFFD97706);
-  static const Color error   = Color(0xFFDC2626);
+  // ── Semantic (flat, no gradients) ─────────────────────────
+  static const Color success = Color(0xFF0E9F8E); // reuses tertiary tone
+  static const Color warning = Color(0xFFB7791F);
+  static const Color error   = Color(0xFFC23B33);
 
-  // ── Gradients ─────────────────────────────────────────────
+  // ── Backwards-compatible aliases ──────────────────────────
+  // Kept so existing widgets referencing the old Navy/Sky palette
+  // continue to compile without modification. All resolve to the
+  // new Clinical tokens — no gradients, flat colour only.
+  static const Color navy        = primary;
+  static const Color navyMid     = primary;
+  static const Color navyLight   = primary;
+  static const Color sky         = tertiary;
+  static const Color skyDark     = tertiary;
+  static const Color skyLight    = Color(0xFFE3F4F2);
+  static const Color indigo      = primary;
+  static const Color indigoDark  = primary;
+  static const Color indigoDarker = primary;
+  static const Color amber       = tertiary;
+  static const Color amberSoft   = Color(0xFFE3F4F2);
+
+  // Gradients are explicitly forbidden by the Clinical system.
+  // These are kept as flat single-colour "gradients" (start == end)
+  // purely so any remaining widget reference still compiles —
+  // they render as flat fills, not gradients.
   static const LinearGradient navyGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: <Color>[navy, navyMid, navyLight],
+    colors: <Color>[primary, primary],
   );
-
   static const LinearGradient skyGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: <Color>[sky, skyDark],
+    colors: <Color>[tertiary, tertiary],
   );
-
   static const LinearGradient heroGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: <Color>[surfaceWhite, Color(0xFFF0F9FF), skyLight],
+    colors: <Color>[background, background],
   );
-
   static const LinearGradient footerGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: <Color>[navy, navyMid, navyLight],
+    colors: <Color>[primary, primary],
   );
-
-  // ── Backwards-compatible aliases (used in existing widgets) ──
-  /// Kept so no existing widget referencing AppColors.indigo breaks.
-  static const Color indigo       = navy;
-  static const Color indigoDark   = navyMid;
-  static const Color indigoDarker = Color(0xFF12122E);
-  static const Color amber        = Color(0xFFF59E0B);
-  static const Color amberSoft    = Color(0xFFFFF7ED);
-
   static const LinearGradient authGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: <Color>[navy, navyMid, sky],
+    colors: <Color>[primary, primary],
   );
 }
