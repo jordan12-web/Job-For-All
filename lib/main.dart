@@ -2,7 +2,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'models/user_profile.dart';
-import 'models/pricing_plan.dart';
 import 'pages/admin_dashboard.dart';
 import 'pages/applicants_page.dart';
 import 'pages/blog_page.dart';
@@ -262,14 +261,21 @@ class _JobForAllAppState extends State<JobForAllApp> {
     }
 
     if (settings.name == PricingPage.routeName) {
-      return MaterialPageRoute<void>(builder: (_) => const PricingPage());
+      final JobDraft? draft = args is JobDraft ? args : null;
+      if (draft == null) {
+        DebugLogger.warning('PricingPage requires a JobDraft argument');
+        return MaterialPageRoute<void>(
+          builder: (_) => const JobPostingPage(),
+        );
+      }
+      return MaterialPageRoute<void>(
+        builder: (_) => PricingPage(draft: draft),
+      );
     }
 
     if (settings.name == JobPostingPage.routeName) {
-      final PricingPlan? selectedPlan =
-          args is PricingPlan ? args : null;
       return MaterialPageRoute<void>(
-        builder: (_) => JobPostingPage(selectedPlan: selectedPlan),
+        builder: (_) => const JobPostingPage(),
       );
     }
 
@@ -290,16 +296,18 @@ class _JobForAllAppState extends State<JobForAllApp> {
     }
 
     if (settings.name == JobPostingPaymentPage.routeName) {
-      final PricingPlan? selectedPlan =
-          args is PricingPlan ? args : null;
-      if (selectedPlan == null) {
+      final JobPostingPaymentArgs? paymentArgs =
+          args is JobPostingPaymentArgs ? args : null;
+      if (paymentArgs == null) {
         DebugLogger.warning(
-          'JobPostingPaymentPage requires PricingPlan argument',
+          'JobPostingPaymentPage requires JobPostingPaymentArgs',
         );
-        return MaterialPageRoute<void>(builder: (_) => const PricingPage());
+        return MaterialPageRoute<void>(
+          builder: (_) => const JobPostingPage(),
+        );
       }
       return MaterialPageRoute<void>(
-        builder: (_) => JobPostingPaymentPage(selectedPlan: selectedPlan),
+        builder: (_) => JobPostingPaymentPage(args: paymentArgs),
       );
     }
 

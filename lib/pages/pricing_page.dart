@@ -4,11 +4,18 @@ import '../models/pricing_plan.dart';
 import '../theme/app_colors.dart';
 import '../widgets/common_button.dart';
 import 'job_posting_page.dart';
+import 'job_posting_payment_page.dart';
 
+/// ── GATEKEEPER STEP 2 ────────────────────────────────────────────────
+/// Receives the [JobDraft] from JobPostingPage as a route argument.
+/// Selecting a plan does NOT write anything to the database — it only
+/// forwards the draft + chosen plan to the PaymentPage gatekeeper.
 class PricingPage extends StatefulWidget {
-  const PricingPage({super.key});
+  const PricingPage({super.key, required this.draft});
 
   static const String routeName = '/pricing';
+
+  final JobDraft draft;
 
   @override
   State<PricingPage> createState() => _PricingPageState();
@@ -21,7 +28,7 @@ class _PricingPageState extends State<PricingPage> {
     setState(() => _selectedPlanId = planId);
   }
 
-  void _proceedToJobPosting() {
+  void _proceedToPayment() {
     if (_selectedPlanId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -37,10 +44,15 @@ class _PricingPageState extends State<PricingPage> {
       (PricingPlan plan) => plan.id == _selectedPlanId,
     );
 
+    // Forward BOTH the draft and the plan — PaymentPage needs the draft
+    // to perform the actual INSERT once payment succeeds.
     Navigator.pushNamed(
       context,
-      JobPostingPage.routeName,
-      arguments: selectedPlan,
+      JobPostingPaymentPage.routeName,
+      arguments: JobPostingPaymentArgs(
+        draft: widget.draft,
+        plan: selectedPlan,
+      ),
     );
   }
 
@@ -58,7 +70,6 @@ class _PricingPageState extends State<PricingPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                // Header
                 Text(
                   'Choose Your Job Posting Plan',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -70,32 +81,18 @@ class _PricingPageState extends State<PricingPage> {
                 const SizedBox(height: 8),
                 Text(
                   'Select the plan that best fits your hiring needs',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 48),
-
-                // Pricing cards
-                if (isWide)
-                  _buildWideLayout()
-                else
-                  _buildMobileLayout(),
-
+                if (isWide) _buildWideLayout() else _buildMobileLayout(),
                 const SizedBox(height: 48),
-
-                // Proceed button
                 CommonButton(
-                  label: 'Continue to Job Posting',
-                  onPressed: _proceedToJobPosting,
+                  label: 'Continue to Payment',
+                  onPressed: _proceedToPayment,
                   icon: Icons.arrow_forward,
                 ),
-
                 const SizedBox(height: 24),
-
-                // Info text
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -104,12 +101,9 @@ class _PricingPageState extends State<PricingPage> {
                     border: Border.all(color: AppColors.border),
                   ),
                   child: Text(
-                    'All plans include review and approval by our team. '
-                    'Your job will go live once approved.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                    ),
+                    'Your job will only be created after payment is '
+                    'confirmed on the next screen.',
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -155,7 +149,8 @@ class _PricingPageState extends State<PricingPage> {
   }
 }
 
-/// Individual pricing card widget
+/// Individual pricing card widget — unchanged visually from the
+/// existing implementation already confirmed working.
 class _PricingCard extends StatelessWidget {
   const _PricingCard({
     required this.plan,
@@ -188,7 +183,6 @@ class _PricingCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              // Popular badge
               if (plan.isPopular)
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -211,10 +205,7 @@ class _PricingCard extends StatelessWidget {
                 )
               else
                 const SizedBox(height: 0),
-
               if (plan.isPopular) const SizedBox(height: 12),
-
-              // Plan name
               Text(
                 plan.name,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -222,10 +213,7 @@ class _PricingCard extends StatelessWidget {
                       color: AppColors.primary,
                     ),
               ),
-
               const SizedBox(height: 8),
-
-              // Description
               Text(
                 plan.description,
                 style: TextStyle(
@@ -234,10 +222,7 @@ class _PricingCard extends StatelessWidget {
                   height: 1.5,
                 ),
               ),
-
               const SizedBox(height: 20),
-
-              // Price
               Row(
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
@@ -252,17 +237,11 @@ class _PricingCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     '/ ${plan.duration}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                   ),
                 ],
               ),
-
               const SizedBox(height: 24),
-
-              // Features list
               Text(
                 'Includes:',
                 style: TextStyle(
@@ -271,9 +250,7 @@ class _PricingCard extends StatelessWidget {
                   color: AppColors.secondary,
                 ),
               ),
-
               const SizedBox(height: 12),
-
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: plan.features
@@ -307,10 +284,7 @@ class _PricingCard extends StatelessWidget {
                     )
                     .toList(),
               ),
-
               const SizedBox(height: 24),
-
-              // Selection indicator
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(

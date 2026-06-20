@@ -1,35 +1,50 @@
 import 'package:flutter/material.dart';
 
 import '../data/mock_job_store.dart';
-import '../models/pricing_plan.dart';
-import '../services/job_service.dart';
 import '../utils/debug_logger.dart';
 import '../widgets/common_button.dart';
 import '../widgets/common_text_field.dart';
 import '../widgets/filter_dropdown.dart';
-import 'home_page.dart';
-import 'job_posting_payment_page.dart';
+import 'pricing_page.dart';
+
+/// Plain data holder for a job draft — collected here, never written
+/// to the database. The draft is only persisted after payment succeeds.
+/// See [PricingPage] -> [JobPostingPaymentPage] for the rest of the flow.
+class JobDraft {
+  const JobDraft({
+    required this.title,
+    required this.company,
+    required this.location,
+    required this.type,
+    required this.description,
+    required this.requirements,
+  });
+
+  final String title;
+  final String company;
+  final String location;
+  final String type;
+  final String description;
+  final String requirements;
+}
 
 class JobPostingPage extends StatefulWidget {
-  const JobPostingPage({super.key, this.selectedPlan});
+  const JobPostingPage({super.key});
 
   static const String routeName = '/job-posting';
-
-  final PricingPlan? selectedPlan;
 
   @override
   State<JobPostingPage> createState() => _JobPostingPageState();
 }
 
 class _JobPostingPageState extends State<JobPostingPage> {
-  final TextEditingController _titleController       = TextEditingController();
-  final TextEditingController _companyController     = TextEditingController();
-  final TextEditingController _locationController    = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _titleController        = TextEditingController();
+  final TextEditingController _companyController      = TextEditingController();
+  final TextEditingController _locationController     = TextEditingController();
+  final TextEditingController _descriptionController  = TextEditingController();
   final TextEditingController _requirementsController = TextEditingController();
 
   String _selectedJobType = MockJobStore.jobTypes.first;
-  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -61,8 +76,11 @@ class _JobPostingPageState extends State<JobPostingPage> {
     return null;
   }
 
-  Future<void> _submitJob() async {
-    // ── Validate first — no network call if fields are empty ──────────
+  /// ── GATEKEEPER STEP 1 ──────────────────────────────────────────────
+  /// This NO LONGER calls JobService.createJob(). It only validates the
+  /// form, builds a [JobDraft], and hands it to PricingPage. Nothing
+  /// touches the database until PaymentPage confirms success.
+  void _continueToPricing() {
     final String? validationError = _validate();
     if (validationError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -75,75 +93,24 @@ class _JobPostingPageState extends State<JobPostingPage> {
       return;
     }
 
-    setState(() => _isSubmitting = true);
-
-    DebugLogger.step(
-      'JobPostingPage: submitting "${_titleController.text.trim()}"',
+    final JobDraft draft = JobDraft(
+      title:        _titleController.text.trim(),
+      company:      _companyController.text.trim(),
+      location:     _locationController.text.trim(),
+      type:         _selectedJobType,
+      description:  _descriptionController.text.trim(),
+      requirements: _requirementsController.text.trim(),
     );
 
-    try {
-      await JobService.instance.createJob(
-        title:        _titleController.text.trim(),
-        company:      _companyController.text.trim(),
-        location:     _locationController.text.trim(),
-        type:         _selectedJobType,
-        description:  _descriptionController.text.trim(),
-        requirements: _requirementsController.text.trim(),
-      );
+    DebugLogger.step(
+      'JobPostingPage: draft ready, routing to PricingPage. title="${draft.title}"',
+    );
 
-      DebugLogger.success('Job posting successful');
-
-      if (!mounted) {
-        return;
-      }
-
-      // Show success and navigate to payment or home
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            'Job submitted for review. It will appear once approved by an admin.',
-          ),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.green[700],
-          duration: const Duration(seconds: 4),
-        ),
-      );
-
-      // If a pricing plan was selected, navigate to payment page
-      if (widget.selectedPlan != null) {
-        Navigator.pushNamed(
-          context,
-          JobPostingPaymentPage.routeName,
-          arguments: widget.selectedPlan,
-        );
-      } else {
-        // Otherwise go to home (backward compatibility)
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          HomePage.routeName,
-          (Route<dynamic> route) => false,
-        );
-      }
-    } catch (e) {
-      DebugLogger.error('JobPostingPage: createJob failed: $e');
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() => _isSubmitting = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-          ),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Theme.of(context).colorScheme.error,
-          duration: const Duration(seconds: 5),
-        ),
-      );
-    }
+    Navigator.pushNamed(
+      context,
+      PricingPage.routeName,
+      arguments: draft,
+    );
   }
 
   @override
@@ -163,14 +130,14 @@ class _JobPostingPageState extends State<JobPostingPage> {
                   children: <Widget>[
                     Text(
                       'Job Details',
-                      style:
-                          Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Your listing will be reviewed before it goes live.',
+                      'Next, you\'ll choose a plan and complete payment '
+                      'before this listing goes live.',
                       style: TextStyle(color: Colors.grey[600]),
                     ),
                     const SizedBox(height: 24),
@@ -213,21 +180,13 @@ class _JobPostingPageState extends State<JobPostingPage> {
                       maxLines: 4,
                     ),
                     const SizedBox(height: 28),
-                    // ── Submit button ──────────────────────────────────────
-                    // Uses CommonButton to keep styling consistent with the
-                    // rest of the app — no style changes per sprint rules.
-                    // Shows a spinner inside the button while submitting.
-                    _isSubmitting
-                        ? const Center(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              child: CircularProgressIndicator(),
-                            ),
-                          )
-                        : CommonButton(
-                            label: 'Post Job',
-                            onPressed: _submitJob,
-                          ),
+                    // ── No longer "Post Job" — this only moves the user
+                    //    forward to pricing. Nothing is saved yet.
+                    CommonButton(
+                      label: 'Continue to Pricing',
+                      icon: Icons.arrow_forward,
+                      onPressed: _continueToPricing,
+                    ),
                   ],
                 ),
               ),
