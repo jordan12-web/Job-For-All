@@ -13,6 +13,7 @@ import 'job_listing_page.dart';
 import 'job_posting_page.dart';
 import 'job_seeker_profile.dart';
 import 'payment_page.dart';
+import 'pricing_page.dart';
 import 'ussd_simulation.dart';
 
 class HomePage extends StatefulWidget {
@@ -159,14 +160,17 @@ class _HomePageState extends State<HomePage> {
 }
 
 class _DashboardTab extends StatelessWidget {
-  const _DashboardTab({required this.role, required this.onSelectTab});
+  const _DashboardTab({
+    required this.role,
+    required this.onSelectTab,
+  });
 
   final String role;
   final ValueChanged<String> onSelectTab;
 
   @override
   Widget build(BuildContext context) {
-    final List<_DashboardAction> actions = _actionsForRole();
+    final List<_DashboardAction> actions = _actionsForRole(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
@@ -247,7 +251,7 @@ class _DashboardTab extends StatelessWidget {
     return 'Browse recommended jobs, manage your seeker profile, and track matching notifications.';
   }
 
-  List<_DashboardAction> _actionsForRole() {
+  List<_DashboardAction> _actionsForRole(BuildContext context) {
     if (RoleUtils.isAdmin(role)) {
       return <_DashboardAction>[
         _DashboardAction(
@@ -271,7 +275,7 @@ class _DashboardTab extends StatelessWidget {
           icon: Icons.post_add,
           title: 'Post a job',
           subtitle: 'Create a new listing for review.',
-          onTap: () => onSelectTab('postJob'),
+          onTap: () => Navigator.pushNamed(context, PricingPage.routeName),
         ),
         _DashboardAction(
           icon: Icons.groups,

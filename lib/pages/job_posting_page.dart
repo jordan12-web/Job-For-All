@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 
 import '../data/mock_job_store.dart';
+import '../models/pricing_plan.dart';
 import '../services/job_service.dart';
 import '../utils/debug_logger.dart';
 import '../widgets/common_button.dart';
 import '../widgets/common_text_field.dart';
 import '../widgets/filter_dropdown.dart';
 import 'home_page.dart';
+import 'job_posting_payment_page.dart';
 
 class JobPostingPage extends StatefulWidget {
-  const JobPostingPage({super.key});
+  const JobPostingPage({super.key, this.selectedPlan});
 
   static const String routeName = '/job-posting';
+
+  final PricingPlan? selectedPlan;
 
   @override
   State<JobPostingPage> createState() => _JobPostingPageState();
@@ -93,7 +97,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
         return;
       }
 
-      // Show success and navigate back to employer dashboard (home)
+      // Show success and navigate to payment or home
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
@@ -105,12 +109,21 @@ class _JobPostingPageState extends State<JobPostingPage> {
         ),
       );
 
-      // Go to home — the employer dashboard tab is already set by the session
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        HomePage.routeName,
-        (Route<dynamic> route) => false,
-      );
+      // If a pricing plan was selected, navigate to payment page
+      if (widget.selectedPlan != null) {
+        Navigator.pushNamed(
+          context,
+          JobPostingPaymentPage.routeName,
+          arguments: widget.selectedPlan,
+        );
+      } else {
+        // Otherwise go to home (backward compatibility)
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          HomePage.routeName,
+          (Route<dynamic> route) => false,
+        );
+      }
     } catch (e) {
       DebugLogger.error('JobPostingPage: createJob failed: $e');
 
