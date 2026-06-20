@@ -2,10 +2,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/user_profile.dart';
-import '../pages/admin_dashboard.dart';
 import '../pages/home_page.dart';
-import '../pages/employer_profile.dart';
-import '../pages/job_listing_page.dart';
 import '../pages/login_page.dart';
 import '../utils/debug_logger.dart';
 import '../utils/role_utils.dart';

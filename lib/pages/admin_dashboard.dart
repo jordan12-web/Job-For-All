@@ -735,30 +735,3 @@ class _VerificationPanel extends StatelessWidget {
     );
   }
 }
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color color = switch (status) {
-      'Approved' => AppColors.success,
-      'Rejected' => AppColors.error,
-      _          => AppColors.warning,
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color:        color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-        border:       Border.all(color: color),
-      ),
-      child: Text(
-        status,
-        style: TextStyle(color: color, fontWeight: FontWeight.w800),
-      ),
-    );
-  }
-}

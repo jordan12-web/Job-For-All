@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/pricing_plan.dart';
+import '../services/employer_service.dart';
 import '../services/job_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/debug_logger.dart';
@@ -166,6 +167,20 @@ class _JobPostingPaymentPageState extends State<JobPostingPaymentPage> {
       );
 
       DebugLogger.success('Job created after payment confirmation');
+
+      // Update the employer's subscription_plan now that payment is
+      // confirmed. Best-effort: if this fails, the job posting itself
+      // has already succeeded and should not be rolled back — we log
+      // and continue rather than blocking the user on a secondary write.
+      final bool subscriptionUpdated =
+          await EmployerService.instance.setSubscriptionPlan(
+        widget.args.plan.id,
+      );
+      if (!subscriptionUpdated) {
+        DebugLogger.warning(
+          'Job created, but failed to update subscription_plan on employers table',
+        );
+      }
 
       if (!mounted) {
         return;
