@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
@@ -9,86 +10,87 @@ import 'app_colors.dart';
 abstract final class AppTheme {
   static ThemeData build() {
     const ColorScheme colorScheme = ColorScheme(
-      brightness:  Brightness.light,
-      primary:     AppColors.primary,
-      onPrimary:   Colors.white,
-      secondary:   AppColors.tertiary,
+      brightness: Brightness.light,
+      primary: AppColors.primary,
+      onPrimary: Colors.white,
+      secondary: AppColors.tertiary,
       onSecondary: Colors.white,
-      error:       AppColors.error,
-      onError:     Colors.white,
-      surface:     AppColors.surfaceWhite,
-      onSurface:   AppColors.primary,
+      error: AppColors.error,
+      onError: Colors.white,
+      surface: AppColors.surfaceWhite,
+      onSurface: AppColors.primary,
     );
 
     return ThemeData(
-      colorScheme:             colorScheme,
+      colorScheme: colorScheme,
       scaffoldBackgroundColor: AppColors.background,
-      useMaterial3:            true,
+      useMaterial3: true,
 
       // ── Typography — IBM Plex Sans / IBM Plex Mono ────────
       // These ship as system-available fonts on most platforms when
       // referenced by family name; fallbacks ensure legibility even
       // if the exact font isn't present on the host OS/browser.
       fontFamily: 'IBM Plex Sans',
-      fontFamilyFallback: const <String>[
-        'Segoe UI',
-        'Roboto',
-        'Arial',
-      ],
-      textTheme: ThemeData.light().textTheme.apply(
-        bodyColor:    AppColors.primary,
-        displayColor: AppColors.primary,
-      ).copyWith(
-        displayLarge:  const TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.5),
-        displayMedium: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.3),
-        headlineLarge: const TextStyle(fontWeight: FontWeight.w700),
-        headlineMedium: const TextStyle(fontWeight: FontWeight.w600),
-        headlineSmall: const TextStyle(fontWeight: FontWeight.w600),
-        titleLarge:    const TextStyle(fontWeight: FontWeight.w600),
-        titleMedium:   const TextStyle(fontWeight: FontWeight.w600),
-        // Labels use IBM Plex Mono for the "clinical" data-readout feel
-        labelLarge: const TextStyle(
-          fontFamily: 'IBM Plex Mono',
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.2,
-        ),
-        labelMedium: const TextStyle(
-          fontFamily: 'IBM Plex Mono',
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.2,
-          color: AppColors.secondary,
-        ),
-        labelSmall: const TextStyle(
-          fontFamily: 'IBM Plex Mono',
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.3,
-          color: AppColors.secondary,
-        ),
-        bodyMedium: const TextStyle(color: AppColors.secondary),
-        bodySmall:  const TextStyle(color: AppColors.secondary),
-      ),
+      fontFamilyFallback: const <String>['Segoe UI', 'Roboto', 'Arial'],
+      textTheme: ThemeData.light().textTheme
+          .apply(bodyColor: AppColors.primary, displayColor: AppColors.primary)
+          .copyWith(
+            displayLarge: const TextStyle(
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.5,
+            ),
+            displayMedium: const TextStyle(
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+            ),
+            headlineLarge: const TextStyle(fontWeight: FontWeight.w700),
+            headlineMedium: const TextStyle(fontWeight: FontWeight.w600),
+            headlineSmall: const TextStyle(fontWeight: FontWeight.w600),
+            titleLarge: const TextStyle(fontWeight: FontWeight.w600),
+            titleMedium: const TextStyle(fontWeight: FontWeight.w600),
+            // Labels use IBM Plex Mono for the "clinical" data-readout feel
+            labelLarge: const TextStyle(
+              fontFamily: 'IBM Plex Mono',
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.2,
+            ),
+            labelMedium: const TextStyle(
+              fontFamily: 'IBM Plex Mono',
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.2,
+              color: AppColors.secondary,
+            ),
+            labelSmall: const TextStyle(
+              fontFamily: 'IBM Plex Mono',
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.3,
+              color: AppColors.secondary,
+            ),
+            bodyMedium: const TextStyle(color: AppColors.secondary),
+            bodySmall: const TextStyle(color: AppColors.secondary),
+          ),
 
       // ── AppBar ──────────────────────────────────────────
       appBarTheme: const AppBarTheme(
-        backgroundColor:  AppColors.surfaceWhite,
-        foregroundColor:  AppColors.primary,
-        elevation:        0,
-        centerTitle:      false,
+        backgroundColor: AppColors.surfaceWhite,
+        foregroundColor: AppColors.primary,
+        elevation: 0,
+        centerTitle: false,
         surfaceTintColor: Colors.transparent,
-        shadowColor:      Colors.transparent,
+        shadowColor: Colors.transparent,
         titleTextStyle: TextStyle(
           fontFamily: 'IBM Plex Sans',
-          fontSize:   18,
+          fontSize: 18,
           fontWeight: FontWeight.w600,
-          color:      AppColors.primary,
+          color: AppColors.primary,
         ),
       ),
 
       // ── Card — 12px radius (lg token) ─────────────────────
       cardTheme: CardThemeData(
-        color:            AppColors.surfaceWhite,
-        elevation:        0,
-        shadowColor:      Colors.black.withValues(alpha: 0.04),
+        color: AppColors.surfaceWhite,
+        elevation: 0,
+        shadowColor: Colors.black.withValues(alpha: 0.04),
         surfaceTintColor: AppColors.surfaceWhite,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -103,7 +105,9 @@ abstract final class AppTheme {
       // "no color changes or distracting flashes" per spec.
       filledButtonTheme: FilledButtonThemeData(
         style: ButtonStyle(
-          backgroundColor: WidgetStateProperty.resolveWith((Set<WidgetState> s) {
+          backgroundColor: WidgetStateProperty.resolveWith((
+            Set<WidgetState> s,
+          ) {
             if (s.contains(WidgetState.disabled)) {
               return AppColors.textHint;
             }
@@ -170,15 +174,18 @@ abstract final class AppTheme {
 
       // ── Input / TextField ────────────────────────────────
       inputDecorationTheme: InputDecorationTheme(
-        filled:         true,
-        fillColor:      AppColors.surfaceWhite,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        filled: true,
+        fillColor: AppColors.surfaceWhite,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         labelStyle: const TextStyle(
-          color:      AppColors.secondary,
+          color: AppColors.secondary,
           fontWeight: FontWeight.w400,
         ),
         hintStyle: const TextStyle(
-          color:      AppColors.textHint,
+          color: AppColors.textHint,
           fontWeight: FontWeight.w400,
         ),
         border: OutlineInputBorder(
@@ -211,41 +218,37 @@ abstract final class AppTheme {
         backgroundColor: AppColors.background,
         labelStyle: const TextStyle(
           fontFamily: 'IBM Plex Mono',
-          color:      AppColors.secondary,
+          color: AppColors.secondary,
           fontWeight: FontWeight.w500,
-          fontSize:   12,
+          fontSize: 12,
         ),
         side: const BorderSide(color: AppColors.border),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(6),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       ),
 
       // ── Divider ──────────────────────────────────────────
       dividerTheme: const DividerThemeData(
-        color:     AppColors.border,
+        color: AppColors.border,
         thickness: 1,
-        space:     1,
+        space: 1,
       ),
 
       // ── SnackBar ─────────────────────────────────────────
       snackBarTheme: SnackBarThemeData(
-        behavior:         SnackBarBehavior.floating,
-        backgroundColor:  AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.primary,
         contentTextStyle: const TextStyle(color: Colors.white),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
 
       // ── Page transitions — instant, clinical feel ─────────
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: <TargetPlatform, PageTransitionsBuilder>{
           TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
-          TargetPlatform.iOS:     CupertinoPageTransitionsBuilder(),
-          TargetPlatform.linux:   FadeUpwardsPageTransitionsBuilder(),
-          TargetPlatform.macOS:   CupertinoPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
           TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
         },
       ),
