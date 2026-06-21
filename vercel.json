@@ -3,14 +3,10 @@
   "buildCommand": "bash vercel-build.sh",
   "outputDirectory": "build/web",
 
-  "routes": [
+  "rewrites": [
     {
-      "src": "/(.*)\\.",
-      "dest": "/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/((?!.*\\.[a-zA-Z0-9]+$).*)",
+      "destination": "/index.html"
     }
   ]
 }
