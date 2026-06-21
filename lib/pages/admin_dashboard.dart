@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/mock_profile_store.dart';
+import '../models/employer_profile.dart' as model;
 import '../models/job.dart';
+import '../services/employer_service.dart';
 import '../services/job_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/debug_logger.dart';
@@ -31,6 +33,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   final Set<String> _updatingIds = <String>{};
 
+  // ── Employer verification queue ───────────────────────────────────────
+  List<model.EmployerProfile> _pendingVerifications = <model.EmployerProfile>[];
+  bool _isLoadingVerifications = true;
+  String? _verificationLoadError;
+  final Set<String> _verifyingIds = <String>{};
+
   @override
   void initState() {
     super.initState();
@@ -41,7 +49,85 @@ class _AdminDashboardState extends State<AdminDashboard> {
     await Future.wait(<Future<void>>[
       _loadDashboard(),
       _loadAnalytics(),
+      _loadVerificationQueue(),
     ]);
+  }
+
+  Future<void> _loadVerificationQueue() async {
+    setState(() {
+      _isLoadingVerifications = true;
+      _verificationLoadError  = null;
+    });
+
+    try {
+      DebugLogger.step('AdminDashboard: loading verification queue');
+      final List<model.EmployerProfile> pending =
+          await EmployerService.instance.fetchPendingVerifications();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _pendingVerifications  = pending;
+        _isLoadingVerifications = false;
+      });
+    } catch (e) {
+      DebugLogger.error('Verification queue load failed: $e');
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isLoadingVerifications = false;
+        _verificationLoadError  =
+            'Could not load verification requests. Pull down to retry.';
+      });
+    }
+  }
+
+  Future<void> _approveVerification(model.EmployerProfile employer) async {
+    if (_verifyingIds.contains(employer.id)) {
+      return;
+    }
+
+    final bool confirmed = await _confirmAction(
+      title: 'Approve verification?',
+      message:
+          '"${employer.companyName}" will be marked as a verified '
+          'business and can publish live job postings.',
+      confirmLabel: 'Approve',
+    );
+
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    setState(() => _verifyingIds.add(employer.id));
+
+    final bool success = await EmployerService.instance.setVerified(
+      employerId: employer.id,
+      verified: true,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _verifyingIds.remove(employer.id);
+      if (success) {
+        _pendingVerifications.removeWhere(
+          (model.EmployerProfile e) => e.id == employer.id,
+        );
+      }
+    });
+
+    _showMessage(
+      success
+          ? '${employer.companyName} approved and verified.'
+          : 'Failed to approve verification.',
+      isError: !success,
+    );
   }
 
   Future<void> _loadDashboard() async {
@@ -351,7 +437,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
               const SizedBox(height: 24),
 
-              // ── Verification panel (mock) ─────────────────
+              // ── Employer verification requests (real Supabase data) ──
+              _VerificationRequestsPanel(
+                isLoading:    _isLoadingVerifications,
+                loadError:    _verificationLoadError,
+                pending:      _pendingVerifications,
+                verifyingIds: _verifyingIds,
+                onApprove:    _approveVerification,
+                onRetry:      _loadVerificationQueue,
+              ),
+              const SizedBox(height: 24),
+
+              // ── Verification panel (mock — job seeker docs) ───
               _VerificationPanel(
                 onVerifyJobSeeker: _verifyJobSeekerProfile,
                 onFlagJobSeeker:   _flagJobSeekerAccount,
@@ -729,6 +826,180 @@ class _VerificationPanel extends StatelessWidget {
                 ),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+// ── Employer verification requests — real Supabase data ─────────────────────
+
+class _VerificationRequestsPanel extends StatelessWidget {
+  const _VerificationRequestsPanel({
+    required this.isLoading,
+    required this.loadError,
+    required this.pending,
+    required this.verifyingIds,
+    required this.onApprove,
+    required this.onRetry,
+  });
+
+  final bool isLoading;
+  final String? loadError;
+  final List<model.EmployerProfile> pending;
+  final Set<String> verifyingIds;
+  final Future<void> Function(model.EmployerProfile) onApprove;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Text(
+                  'Verification Requests',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(width: 12),
+                if (!isLoading && pending.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '${pending.length}',
+                      style: TextStyle(
+                        color: Colors.orange.shade800,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Employers awaiting business registration approval.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+
+            if (isLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (loadError != null)
+              Column(
+                children: <Widget>[
+                  Icon(Icons.error_outline, size: 40, color: AppColors.error),
+                  const SizedBox(height: 8),
+                  Text(
+                    loadError!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.error),
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: onRetry,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              )
+            else if (pending.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Column(
+                  children: <Widget>[
+                    Icon(
+                      Icons.verified_outlined,
+                      size: 48,
+                      color: AppColors.success,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'No pending verification requests.',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ...pending.map((model.EmployerProfile employer) {
+                final bool verifying = verifyingIds.contains(employer.id);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                employer.companyName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Reg #: ${employer.businessRegistrationNumber ?? '—'}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              if (employer.ownerEmail != null)
+                                Text(
+                                  employer.ownerEmail!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        verifying
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : FilledButton.icon(
+                                onPressed: () => onApprove(employer),
+                                icon: const Icon(Icons.check, size: 16),
+                                label: const Text('Approve'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.success,
+                                ),
+                              ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
           ],
         ),
       ),

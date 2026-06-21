@@ -3,19 +3,12 @@ import 'package:flutter/material.dart';
 import '../models/pricing_plan.dart';
 import '../theme/app_colors.dart';
 import '../widgets/common_button.dart';
-import 'job_posting_page.dart';
 import 'job_posting_payment_page.dart';
 
-/// ── GATEKEEPER STEP 2 ────────────────────────────────────────────────
-/// Receives the [JobDraft] from JobPostingPage as a route argument.
-/// Selecting a plan does NOT write anything to the database — it only
-/// forwards the draft + chosen plan to the PaymentPage gatekeeper.
 class PricingPage extends StatefulWidget {
-  const PricingPage({super.key, required this.draft});
+  const PricingPage({super.key});
 
   static const String routeName = '/pricing';
-
-  final JobDraft draft;
 
   @override
   State<PricingPage> createState() => _PricingPageState();
@@ -44,15 +37,11 @@ class _PricingPageState extends State<PricingPage> {
       (PricingPlan plan) => plan.id == _selectedPlanId,
     );
 
-    // Forward BOTH the draft and the plan — PaymentPage needs the draft
-    // to perform the actual INSERT once payment succeeds.
+    // Forward the selected plan to PaymentPage
     Navigator.pushNamed(
       context,
       JobPostingPaymentPage.routeName,
-      arguments: JobPostingPaymentArgs(
-        draft: widget.draft,
-        plan: selectedPlan,
-      ),
+      arguments: selectedPlan,
     );
   }
 

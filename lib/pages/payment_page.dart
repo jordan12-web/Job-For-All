@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../data/mock_payment_store.dart';
+import '../theme/app_colors.dart';
 import '../widgets/common_button.dart';
-import '../widgets/transaction_table.dart';
 
-class PaymentPage extends StatefulWidget {
+class PaymentPage extends StatelessWidget {
   const PaymentPage({super.key, this.showAppBar = true});
 
   static const String routeName = '/payments';
@@ -12,157 +11,173 @@ class PaymentPage extends StatefulWidget {
   final bool showAppBar;
 
   @override
-  State<PaymentPage> createState() => _PaymentPageState();
-}
-
-class _PaymentPageState extends State<PaymentPage> {
-  static const List<Map<String, String>> _paymentItems = <Map<String, String>>[
-    <String, String>{
-      'title': 'Featured Job Post',
-      'description': 'Boost one listing at the top of job search results.',
-      'amount': 'KES 1,500',
-    },
-    <String, String>{
-      'title': 'Employer Subscription',
-      'description': 'Access monthly featured listings and applicant insights.',
-      'amount': 'KES 5,000',
-    },
-  ];
-
-  void _simulatePurchase(Map<String, String> item) {
-    MockPaymentStore.addTransaction(
-      item: item['title'] ?? 'Unknown item',
-      amount: item['amount'] ?? 'KES 0',
-      status: 'Confirmed',
-    );
-
-    setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Payment confirmed for ${item['title']}')),
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final Widget content = SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Text(
-                'Payments',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 16),
-              LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) {
-                  final bool isWide = constraints.maxWidth >= 760;
-                  final List<Widget> cards = _paymentItems.map((
-                    Map<String, String> item,
-                  ) {
-                    return _PaymentOptionCard(
-                      item: item,
-                      onPurchase: () => _simulatePurchase(item),
-                    );
-                  }).toList();
-
-                  if (!isWide) {
-                    return Column(
-                      children: cards
-                          .map(
-                            (Widget card) => Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: card,
-                            ),
-                          )
-                          .toList(),
-                    );
-                  }
-
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      for (
-                        int index = 0;
-                        index < cards.length;
-                        index++
-                      ) ...<Widget>[
-                        Expanded(child: cards[index]),
-                        if (index < cards.length - 1) const SizedBox(width: 16),
-                      ],
-                    ],
-                  );
-                },
-              ),
-              const SizedBox(height: 24),
-              TransactionTable(transactions: MockPaymentStore.transactions),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (!widget.showAppBar) {
-      return content;
-    }
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Payments')),
-      body: content,
-    );
-  }
-}
-
-class _PaymentOptionCard extends StatelessWidget {
-  const _PaymentOptionCard({required this.item, required this.onPurchase});
-
-  final Map<String, String> item;
-  final VoidCallback onPurchase;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      appBar: showAppBar
+          ? AppBar(
+              title: const Text('Payment History'),
+              elevation: 0,
+              backgroundColor: AppColors.primary,
+            )
+          : null,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Icon(
-              Icons.payments_outlined,
-              color: Theme.of(context).colorScheme.primary,
-              size: 32,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              item['title'] ?? 'Payment item',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            Text(item['description'] ?? ''),
-            const SizedBox(height: 16),
-            Text(
-              item['amount'] ?? 'KES 0',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: Theme.of(context).colorScheme.primary,
+          children: [
+            // Header
+            const Text(
+              'Payment History',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
               ),
             ),
-            const SizedBox(height: 20),
-            CommonButton(
-              label: 'Simulate Payment',
-              icon: Icons.lock,
-              onPressed: onPurchase,
+            const SizedBox(height: 24),
+
+            // Payment summary cards
+            _buildSummaryCard(
+              'Total Paid',
+              '₾ 0.00',
+              AppColors.primary,
+            ),
+            const SizedBox(height: 16),
+            _buildSummaryCard(
+              'Active Subscriptions',
+              '0',
+              AppColors.tertiary,
+            ),
+            const SizedBox(height: 32),
+
+            // Payment methods section
+            const Text(
+              'Payment Methods',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildPaymentMethodCard('Telebirr'),
+            const SizedBox(height: 12),
+            _buildPaymentMethodCard('CBE Birr'),
+            const SizedBox(height: 12),
+            _buildPaymentMethodCard('Chapa'),
+            const SizedBox(height: 32),
+
+            // No transactions message
+            Center(
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.receipt_long,
+                    size: 64,
+                    color: AppColors.secondary.withValues(alpha: 0.3),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No transactions yet',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppColors.secondary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  CommonButton(
+                    label: 'Post a Job',
+                    onPressed: () {
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       ),
     );
   }
+
+  Widget _buildSummaryCard(String title, String value, Color color) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.secondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethodCard(String method) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.payment, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  method,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const Text(
+                  'Payment method',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.secondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right, color: AppColors.secondary.withValues(alpha: 0.5)),
+        ],
+      ),
+    );
+  }
 }
+

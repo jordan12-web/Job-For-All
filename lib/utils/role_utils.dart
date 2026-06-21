@@ -94,15 +94,12 @@ class RoleUtils {
           label: 'Applicants',
           icon: Icons.groups_outlined,
         ),
+        // Subscription is now part of the Profile tab's SubscriptionHub —
+        // see EmployerProfile's TabBarView. No standalone Payments tab.
         RoleNavItem(
           key: 'profile',
           label: 'Profile',
           icon: Icons.business_outlined,
-        ),
-        RoleNavItem(
-          key: 'payments',
-          label: 'Payments',
-          icon: Icons.payments_outlined,
         ),
       ];
     }

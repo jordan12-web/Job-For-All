@@ -2,6 +2,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'models/user_profile.dart';
+import 'models/pricing_plan.dart';
 import 'pages/admin_dashboard.dart';
 import 'pages/applicants_page.dart';
 import 'pages/blog_page.dart';
@@ -22,6 +23,11 @@ import 'services/auth_service.dart';
 import 'theme/app_theme.dart';
 import 'utils/debug_logger.dart';
 import 'utils/role_utils.dart';
+
+class HomePageArgs {
+  const HomePageArgs({required this.initialTabKey});
+  final String initialTabKey;
+}
 
 Future<void> main() async {
   DebugLogger.log('═════════════════════════════════════════');
@@ -261,21 +267,14 @@ class _JobForAllAppState extends State<JobForAllApp> {
     }
 
     if (settings.name == PricingPage.routeName) {
-      final JobDraft? draft = args is JobDraft ? args : null;
-      if (draft == null) {
-        DebugLogger.warning('PricingPage requires a JobDraft argument');
-        return MaterialPageRoute<void>(
-          builder: (_) => const JobPostingPage(),
-        );
-      }
-      return MaterialPageRoute<void>(
-        builder: (_) => PricingPage(draft: draft),
-      );
+      return MaterialPageRoute<void>(builder: (_) => const PricingPage());
     }
 
     if (settings.name == JobPostingPage.routeName) {
+      final PricingPlan? selectedPlan =
+          args is PricingPlan ? args : null;
       return MaterialPageRoute<void>(
-        builder: (_) => const JobPostingPage(),
+        builder: (_) => JobPostingPage(selectedPlan: selectedPlan),
       );
     }
 
@@ -296,18 +295,16 @@ class _JobForAllAppState extends State<JobForAllApp> {
     }
 
     if (settings.name == JobPostingPaymentPage.routeName) {
-      final JobPostingPaymentArgs? paymentArgs =
-          args is JobPostingPaymentArgs ? args : null;
-      if (paymentArgs == null) {
+      final PricingPlan? selectedPlan =
+          args is PricingPlan ? args : null;
+      if (selectedPlan == null) {
         DebugLogger.warning(
-          'JobPostingPaymentPage requires JobPostingPaymentArgs',
+          'JobPostingPaymentPage requires PricingPlan argument',
         );
-        return MaterialPageRoute<void>(
-          builder: (_) => const JobPostingPage(),
-        );
+        return MaterialPageRoute<void>(builder: (_) => const PricingPage());
       }
       return MaterialPageRoute<void>(
-        builder: (_) => JobPostingPaymentPage(args: paymentArgs),
+        builder: (_) => JobPostingPaymentPage(selectedPlan: selectedPlan),
       );
     }
 
