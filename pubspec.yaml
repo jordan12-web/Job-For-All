@@ -59,8 +59,15 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  assets:
-    - .env
+  # NOTE: .env is intentionally NOT listed as an asset.
+  # Production (Vercel) uses --dart-define for credentials.
+  # Local development reads .env directly from disk via flutter_dotenv,
+  # which does not require it to be declared as a Flutter asset.
+  # Declaring it here breaks CI/production builds where .env doesn't
+  # exist (it's gitignored), since Flutter's asset bundler fails the
+  # whole build if a declared asset file is missing.
+  # assets:
+  #   - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
