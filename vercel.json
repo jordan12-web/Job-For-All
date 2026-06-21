@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "flutter build web --release --no-tree-shake-icons",
+  "buildCommand": "bash vercel-build.sh",
   "outputDirectory": "build/web",
-  
+
   "routes": [
     {
       "src": "/(.*)\\.",
