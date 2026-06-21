@@ -7,6 +7,15 @@ import '../pages/login_page.dart';
 import '../utils/debug_logger.dart';
 import '../utils/role_utils.dart';
 
+/// Values injected at build time via:
+///   flutter build web --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
+/// Used in production (Vercel) where no .env file exists in the build
+/// environment. Empty string if not provided at build time.
+const String _dartDefineSupabaseUrl =
+    String.fromEnvironment('SUPABASE_URL', defaultValue: '');
+const String _dartDefineSupabaseAnonKey =
+    String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
+
 /// Result wrapper for auth operations.
 class AuthResult {
   const AuthResult({
@@ -59,16 +68,37 @@ class AuthService {
   SupabaseClient get _client => Supabase.instance.client;
 
   static Future<void> initialize() async {
-    DebugLogger.step('Loading .env file...');
-    await dotenv.load(fileName: '.env');
-    DebugLogger.success('.env loaded');
+    String url = _dartDefineSupabaseUrl;
+    String anonKey = _dartDefineSupabaseAnonKey;
 
-    final String? url = dotenv.env['SUPABASE_URL'];
-    final String? anonKey = dotenv.env['SUPABASE_ANON_KEY'];
+    // ── Production path: credentials baked in at build time ──────────
+    if (url.isNotEmpty && anonKey.isNotEmpty) {
+      DebugLogger.success('Using --dart-define credentials (production build)');
+    } else {
+      // ── Local dev fallback: read from .env via flutter_dotenv ──────
+      // This path is only hit when --dart-define values were not
+      // provided, e.g. `flutter run -d chrome` during local development.
+      DebugLogger.step('No --dart-define values found, loading .env file...');
+      try {
+        await dotenv.load(fileName: '.env');
+        DebugLogger.success('.env loaded');
+      } catch (e) {
+        DebugLogger.error('Could not load .env: $e');
+      }
 
-    if (url == null || url.isEmpty || anonKey == null || anonKey.isEmpty) {
-      DebugLogger.error('Missing SUPABASE_URL or SUPABASE_ANON_KEY in .env');
-      throw Exception('Missing SUPABASE_URL or SUPABASE_ANON_KEY in .env');
+      url = dotenv.env['SUPABASE_URL'] ?? '';
+      anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+    }
+
+    if (url.isEmpty || anonKey.isEmpty) {
+      DebugLogger.error(
+        'Missing Supabase credentials. Provide them via --dart-define '
+        '(production) or a local .env file (development).',
+      );
+      throw Exception(
+        'Missing SUPABASE_URL or SUPABASE_ANON_KEY. '
+        'Set them via --dart-define or .env.',
+      );
     }
 
     DebugLogger.info('SUPABASE_URL: $url');
