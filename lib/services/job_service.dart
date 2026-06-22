@@ -89,12 +89,61 @@ class JobService {
     required String description,
     required String requirements,
   }) async {
+    return _insertJob(
+      title: title,
+      company: company,
+      location: location,
+      type: type,
+      description: description,
+      requirements: requirements,
+      status: 'Pending',
+    );
+  }
+
+  /// Inserts a new job with `status = 'Draft'`.
+  ///
+  /// Draft jobs are NEVER visible to seekers — [fetchApprovedJobs] only
+  /// returns `status = 'Approved'` rows, so drafts are excluded
+  /// automatically with no extra filtering needed. Employers can publish
+  /// a draft later (Sprint 2: Recruitment Hub "My Postings").
+  Future<Job> createDraft({
+    required String title,
+    required String company,
+    required String location,
+    required String type,
+    required String description,
+    required String requirements,
+  }) async {
+    return _insertJob(
+      title: title,
+      company: company,
+      location: location,
+      type: type,
+      description: description,
+      requirements: requirements,
+      status: 'Draft',
+    );
+  }
+
+  /// Shared insert logic for [createJob] and [createDraft] — keeps the
+  /// employer_id/session guard and error handling in exactly one place.
+  Future<Job> _insertJob({
+    required String title,
+    required String company,
+    required String location,
+    required String type,
+    required String description,
+    required String requirements,
+    required String status,
+  }) async {
     final String? employerId = _client.auth.currentSession?.user.id;
     if (employerId == null || employerId.isEmpty) {
       throw Exception('You must be signed in to post a job.');
     }
 
-    DebugLogger.step('createJob: employerId=$employerId title=$title');
+    DebugLogger.step(
+      '_insertJob: employerId=$employerId title=$title status=$status',
+    );
 
     try {
       final List<dynamic> result = await _client
@@ -107,7 +156,7 @@ class JobService {
             'type':         type,
             'description':  description.trim(),
             'requirements': requirements.trim(),
-            'status':       'Pending',
+            'status':       status,
           })
           .select();
 
@@ -116,14 +165,34 @@ class JobService {
       }
 
       final Job job = Job.fromMap(result.first as Map<String, dynamic>);
-      DebugLogger.success('createJob: ${job.id} — ${job.title}');
+      DebugLogger.success('_insertJob: ${job.id} — ${job.title} ($status)');
       return job;
     } on PostgrestException catch (e) {
-      DebugLogger.error('createJob: ${e.message} | ${e.code}');
-      throw Exception('Failed to post job: ${e.message}');
+      DebugLogger.error('_insertJob: ${e.message} | ${e.code}');
+      throw Exception('Failed to save job: ${e.message}');
     } catch (e) {
-      DebugLogger.error('createJob unexpected: $e');
+      DebugLogger.error('_insertJob unexpected: $e');
       rethrow;
+    }
+  }
+
+  /// Publishes a previously-saved draft by changing its status to
+  /// 'Pending' (awaiting admin approval, same as a fresh submission).
+  /// Used from the Recruitment Hub when an employer clicks "Publish"
+  /// on a draft listed under "My Postings".
+  Future<bool> publishDraft(String jobId) async {
+    try {
+      DebugLogger.step('publishDraft: $jobId');
+      await _client
+          .from(jobsTable)
+          .update(<String, dynamic>{'status': 'Pending'})
+          .eq('id', jobId)
+          .eq('status', 'Draft'); // safety: only publish actual drafts
+      DebugLogger.success('publishDraft: $jobId → Pending');
+      return true;
+    } on PostgrestException catch (e) {
+      DebugLogger.error('publishDraft failed: ${e.message}');
+      return false;
     }
   }
 

@@ -4,6 +4,7 @@ import '../models/job.dart';
 import '../services/application_service.dart';
 import '../services/job_service.dart';
 import '../utils/debug_logger.dart';
+import '../utils/role_utils.dart';
 
 /// Displays full details for a single job and lets a seeker apply.
 ///
@@ -53,6 +54,23 @@ class _JobDetailPageState extends State<JobDetailPage> {
   }
 
   Future<void> _handleApply() async {
+    // RBAC guard: employers can never submit an application, even if
+    // this method were somehow invoked directly (e.g. a future bug
+    // re-enables the button). This check happens before any network
+    // call, so an employer session can never reach ApplicationService.apply.
+    if (RoleUtils.isEmployer()) {
+      DebugLogger.warning(
+        'Blocked apply attempt: current role is Employer',
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Employers cannot apply to job postings.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     if (_hasApplied || _isSubmitting) {
       return;
     }
@@ -100,7 +118,12 @@ class _JobDetailPageState extends State<JobDetailPage> {
 
   /// Builds the Apply button — handles all three states:
   /// checking, already applied, and ready to apply.
+  /// Returns an empty widget entirely for employers — RBAC.
   Widget _buildApplyButton() {
+    if (RoleUtils.isEmployer()) {
+      return const SizedBox.shrink();
+    }
+
     if (_isCheckingStatus) {
       return FilledButton.icon(
         onPressed: null,

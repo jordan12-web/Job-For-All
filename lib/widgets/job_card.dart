@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../utils/role_utils.dart';
 
 /// Displays a single job listing using the "Clinical" design system.
 ///
@@ -137,13 +138,16 @@ class JobCard extends StatelessWidget {
             const SizedBox(height: 20),
 
             // ── The single accent action on this card ──────────
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton(
-                onPressed: onApply,
-                child: const Text('Apply'),
+            // RBAC: employers never see an Apply action on job cards —
+            // they post jobs, they don't apply to them.
+            if (!RoleUtils.isEmployer())
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                  onPressed: onApply,
+                  child: const Text('Apply'),
+                ),
               ),
-            ),
           ],
         ),
       ),

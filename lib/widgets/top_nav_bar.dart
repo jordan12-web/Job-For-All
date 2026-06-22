@@ -69,6 +69,23 @@ class _TopNavBarState extends State<TopNavBar> {
     widget.onGuestNavigate?.call(key);
   }
 
+  /// Navigation fix: the logo always navigates somewhere, regardless of
+  /// the current page or auth state.
+  ///  - Guest mode: scrolls the landing page back to its home section
+  ///    (existing behaviour, unchanged).
+  ///  - Authenticated mode: selects the 'home' tab in HomePage's nav
+  ///    rail/bar, returning the user to their role dashboard from
+  ///    anywhere in the app — Recruitment Hub, Applicants, Profile, etc.
+  VoidCallback? _resolveBrandTap() {
+    if (widget.isGuestMode) {
+      return () => _handleGuestTap('home');
+    }
+    if (widget.onDestinationSelected != null) {
+      return () => widget.onDestinationSelected!(0); // index 0 = 'home'
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<RoleNavItem> roleItems = widget.isGuestMode
@@ -151,9 +168,7 @@ class _TopNavBarState extends State<TopNavBar> {
       children: <Widget>[
         _BrandBlock(
           isGuest: widget.isGuestMode,
-          onBrandTap: widget.isGuestMode
-              ? () => _handleGuestTap('home')
-              : null,
+          onBrandTap: _resolveBrandTap(),
         ),
         const SizedBox(width: 24),
         Expanded(
@@ -176,9 +191,7 @@ class _TopNavBarState extends State<TopNavBar> {
           children: <Widget>[
             _BrandBlock(
               isGuest: widget.isGuestMode,
-              onBrandTap: widget.isGuestMode
-                  ? () => _handleGuestTap('home')
-                  : null,
+              onBrandTap: _resolveBrandTap(),
             ),
             _buildTrailingActions(roleItems, compact: true),
           ],

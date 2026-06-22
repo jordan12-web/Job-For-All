@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'recruitment_hub_page.dart';
 import '../data/mock_notification_store.dart';
 import '../pages/landing_page.dart';
 import '../services/auth_service.dart';
@@ -10,7 +10,7 @@ import 'admin_dashboard.dart';
 import 'applicants_page.dart';
 import 'employer_profile.dart';
 import 'job_listing_page.dart';
-import 'job_posting_page.dart';
+
 import 'job_seeker_profile.dart';
 import 'payment_page.dart';
 import 'pricing_page.dart';
@@ -125,7 +125,7 @@ class _HomePageState extends State<HomePage> {
         },
       ),
       'ussd' => const UssdSimulationPage(showAppBar: false),
-      'postJob' => const JobPostingPage(),
+      'postJob' => const RecruitmentHubPage(showAppBar: false),
       'applicants' => const ApplicantsPage(showAppBar: false),
       'payments' => const PaymentPage(showAppBar: false),
       'admin' || 'moderation' => const AdminDashboard(showAppBar: false),
@@ -160,10 +160,7 @@ class _HomePageState extends State<HomePage> {
 }
 
 class _DashboardTab extends StatelessWidget {
-  const _DashboardTab({
-    required this.role,
-    required this.onSelectTab,
-  });
+  const _DashboardTab({required this.role, required this.onSelectTab});
 
   final String role;
   final ValueChanged<String> onSelectTab;

@@ -179,6 +179,54 @@ class ApplicationService {
     }
   }
 
+  /// Returns the number of applications submitted for a single [jobId].
+  /// Used by the Recruitment Hub's "My Postings" list to show an
+  /// applicant counter next to each job without fetching full rows.
+  Future<int> countApplicationsForJob(String jobId) async {
+    if (jobId.isEmpty) {
+      return 0;
+    }
+    try {
+      final List<dynamic> data = await _client
+          .from(_table)
+          .select('id')
+          .eq('job_id', jobId);
+      return data.length;
+    } on PostgrestException catch (e) {
+      DebugLogger.error('countApplicationsForJob failed: ${e.message}');
+      return 0;
+    }
+  }
+
+  /// Returns applicant counts for multiple jobs in one round trip.
+  /// More efficient than calling [countApplicationsForJob] in a loop
+  /// when rendering a full "My Postings" list.
+  Future<Map<String, int>> countApplicationsForJobs(
+    List<String> jobIds,
+  ) async {
+    if (jobIds.isEmpty) {
+      return <String, int>{};
+    }
+    try {
+      final List<dynamic> data = await _client
+          .from(_table)
+          .select('job_id')
+          .inFilter('job_id', jobIds);
+
+      final Map<String, int> counts = <String, int>{
+        for (final String id in jobIds) id: 0,
+      };
+      for (final dynamic row in data) {
+        final String jobId = (row as Map<String, dynamic>)['job_id'] as String;
+        counts[jobId] = (counts[jobId] ?? 0) + 1;
+      }
+      return counts;
+    } on PostgrestException catch (e) {
+      DebugLogger.error('countApplicationsForJobs failed: ${e.message}');
+      return <String, int>{for (final String id in jobIds) id: 0};
+    }
+  }
+
   /// Updates an application's status to 'accepted' or 'rejected'.
   ///
   /// Only the employer who owns the job can do this (enforced by RLS).

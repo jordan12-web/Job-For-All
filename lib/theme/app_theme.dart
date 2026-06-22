@@ -1,3 +1,10 @@
+// ignore_for_file: unnecessary_import
+// The cupertino.dart import below is flagged as unnecessary by the
+// local Flutter SDK's analyzer (material.dart re-exports
+// CupertinoPageTransitionsBuilder in this version), but the production
+// build pipeline (dart2js --release on Vercel CI) previously failed
+// with "Method not found: CupertinoPageTransitionsBuilder" without this
+// explicit import. Keeping it intentionally — see Sprint deploy notes.
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
