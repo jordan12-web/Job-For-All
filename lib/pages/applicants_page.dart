@@ -52,10 +52,8 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
     try {
       DebugLogger.step('ApplicantsPage: loading for employerId=$employerId');
 
-      final List<Application> apps =
-          await ApplicationService.instance.fetchApplicationsForEmployer(
-        employerId,
-      );
+      final List<Application> apps = await ApplicationService.instance
+          .fetchApplicationsForEmployer(employerId);
 
       if (!mounted) {
         return;
@@ -88,15 +86,13 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
 
     setState(() => _updatingIds.add(application.id));
 
-    DebugLogger.step(
-      'ApplicantsPage: updating ${application.id} → $newStatus',
-    );
+    DebugLogger.step('ApplicantsPage: updating ${application.id} → $newStatus');
 
-    final bool success =
-        await ApplicationService.instance.updateApplicationStatus(
-      applicationId: application.id,
-      status: newStatus,
-    );
+    final bool success = await ApplicationService.instance
+        .updateApplicationStatus(
+          applicationId: application.id,
+          status: newStatus,
+        );
 
     if (!mounted) {
       return;
@@ -107,8 +103,9 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
 
       if (success) {
         // Optimistic update — replace the item in the list in-place
-        final int index =
-            _applications.indexWhere((Application a) => a.id == application.id);
+        final int index = _applications.indexWhere(
+          (Application a) => a.id == application.id,
+        );
         if (index != -1) {
           _applications[index] = application.copyWith(status: newStatus);
         }
@@ -137,8 +134,7 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
 
     setState(() => _shortlistingIds.add(application.id));
 
-    final bool success =
-        await NotificationService.instance.scheduleInterview(
+    final bool success = await NotificationService.instance.scheduleInterview(
       seekerId: application.seekerId,
       applicationId: application.id,
       jobTitle: application.jobTitle ?? 'your application',
@@ -174,10 +170,7 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Applicants'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Applicants'), elevation: 0),
       body: body,
     );
   }
@@ -270,10 +263,9 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
             children: <Widget>[
               Text(
                 'Applicants',
-                style:
-                    Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
@@ -327,14 +319,16 @@ class _ApplicantCard extends StatelessWidget {
     return switch (application.status) {
       'accepted' => Colors.green[700]!,
       'rejected' => Colors.red[700]!,
-      _          => Colors.orange[700]!,
+      _ => Colors.orange[700]!,
     };
   }
 
   @override
   Widget build(BuildContext context) {
     final String name =
-        application.seekerName ?? application.seekerEmail ?? 'Unknown applicant';
+        application.seekerName ??
+        application.seekerEmail ??
+        'Unknown applicant';
     final String jobTitle = application.jobTitle ?? 'Unknown job';
     final String email = application.seekerEmail ?? '';
 
@@ -350,8 +344,9 @@ class _ApplicantCard extends StatelessWidget {
               children: <Widget>[
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor:
-                      Theme.of(context).colorScheme.primaryContainer,
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer,
                   child: Text(
                     name.isNotEmpty ? name[0].toUpperCase() : '?',
                     style: TextStyle(
@@ -367,16 +362,11 @@ class _ApplicantCard extends StatelessWidget {
                     children: <Widget>[
                       Text(
                         name,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
+                        style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       if (email.isNotEmpty)
-                        Text(
-                          email,
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
+                        Text(email, style: TextStyle(color: Colors.grey[600])),
                     ],
                   ),
                 ),

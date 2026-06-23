@@ -75,10 +75,7 @@ class _RecruitmentHubPageState extends State<RecruitmentHubPage>
         Expanded(
           child: TabBarView(
             controller: _tabController,
-            children: const <Widget>[
-              _CreateJobTab(),
-              _MyPostingsTab(),
-            ],
+            children: const <Widget>[_CreateJobTab(), _MyPostingsTab()],
           ),
         ),
       ],
@@ -105,16 +102,16 @@ class _CreateJobTab extends StatefulWidget {
 }
 
 class _CreateJobTabState extends State<_CreateJobTab> {
-  final TextEditingController _titleController        = TextEditingController();
-  final TextEditingController _companyController      = TextEditingController();
-  final TextEditingController _locationController     = TextEditingController();
-  final TextEditingController _descriptionController  = TextEditingController();
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _companyController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _requirementsController = TextEditingController();
 
-  final FocusNode _titleFocus        = FocusNode();
-  final FocusNode _companyFocus      = FocusNode();
-  final FocusNode _locationFocus     = FocusNode();
-  final FocusNode _descriptionFocus  = FocusNode();
+  final FocusNode _titleFocus = FocusNode();
+  final FocusNode _companyFocus = FocusNode();
+  final FocusNode _locationFocus = FocusNode();
+  final FocusNode _descriptionFocus = FocusNode();
   final FocusNode _requirementsFocus = FocusNode();
 
   String _selectedJobType = MockJobStore.jobTypes.first;
@@ -197,20 +194,20 @@ class _CreateJobTabState extends State<_CreateJobTab> {
     try {
       if (asDraft) {
         await JobService.instance.createDraft(
-          title:        _titleController.text.trim(),
-          company:      _companyController.text.trim(),
-          location:     _locationController.text.trim(),
-          type:         _selectedJobType,
-          description:  _descriptionController.text.trim(),
+          title: _titleController.text.trim(),
+          company: _companyController.text.trim(),
+          location: _locationController.text.trim(),
+          type: _selectedJobType,
+          description: _descriptionController.text.trim(),
           requirements: _requirementsController.text.trim(),
         );
       } else {
         await JobService.instance.createJob(
-          title:        _titleController.text.trim(),
-          company:      _companyController.text.trim(),
-          location:     _locationController.text.trim(),
-          type:         _selectedJobType,
-          description:  _descriptionController.text.trim(),
+          title: _titleController.text.trim(),
+          company: _companyController.text.trim(),
+          location: _locationController.text.trim(),
+          type: _selectedJobType,
+          description: _descriptionController.text.trim(),
           requirements: _requirementsController.text.trim(),
         );
       }
@@ -269,8 +266,8 @@ class _CreateJobTabState extends State<_CreateJobTab> {
                   Text(
                     'Job Details',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -336,8 +333,9 @@ class _CreateJobTabState extends State<_CreateJobTab> {
                     children: <Widget>[
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed:
-                              anyBusy ? null : () => _submit(asDraft: true),
+                          onPressed: anyBusy
+                              ? null
+                              : () => _submit(asDraft: true),
                           icon: _isSavingDraft
                               ? const SizedBox(
                                   width: 16,
@@ -355,9 +353,13 @@ class _CreateJobTabState extends State<_CreateJobTab> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: CommonButton(
-                          label: _isSubmitting ? 'Submitting…' : 'Submit for Review',
+                          label: _isSubmitting
+                              ? 'Submitting…'
+                              : 'Submit for Review',
                           icon: Icons.send,
-                          onPressed: anyBusy ? null : () => _submit(asDraft: false),
+                          onPressed: anyBusy
+                              ? null
+                              : () => _submit(asDraft: false),
                         ),
                       ),
                     ],
@@ -412,13 +414,12 @@ class _MyPostingsTabState extends State<_MyPostingsTab> {
     try {
       DebugLogger.step('MyPostings: loading for employerId=$employerId');
 
-      final List<Job> jobs =
-          await JobService.instance.fetchJobsByEmployer(employerId);
-
-      final Map<String, int> counts =
-          await ApplicationService.instance.countApplicationsForJobs(
-        jobs.map((Job j) => j.id).toList(),
+      final List<Job> jobs = await JobService.instance.fetchJobsByEmployer(
+        employerId,
       );
+
+      final Map<String, int> counts = await ApplicationService.instance
+          .countApplicationsForJobs(jobs.map((Job j) => j.id).toList());
 
       if (!mounted) {
         return;
@@ -444,9 +445,7 @@ class _MyPostingsTabState extends State<_MyPostingsTab> {
   void _openDetail(Job job) {
     Navigator.push(
       context,
-      MaterialPageRoute<void>(
-        builder: (_) => JobPostingDetailPage(job: job),
-      ),
+      MaterialPageRoute<void>(builder: (_) => JobPostingDetailPage(job: job)),
     ).then((_) => _loadPostings()); // refresh counts/status on return
   }
 
@@ -454,8 +453,8 @@ class _MyPostingsTabState extends State<_MyPostingsTab> {
     return switch (status) {
       'Approved' => AppColors.tertiary,
       'Rejected' => AppColors.error,
-      'Draft'    => AppColors.secondary,
-      _          => Colors.orange.shade700, // Pending
+      'Draft' => AppColors.secondary,
+      _ => Colors.orange.shade700, // Pending
     };
   }
 
@@ -557,8 +556,9 @@ class _MyPostingsTabState extends State<_MyPostingsTab> {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: _statusColor(job.status)
-                                        .withValues(alpha: 0.12),
+                                    color: _statusColor(
+                                      job.status,
+                                    ).withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(

@@ -5,10 +5,7 @@ import 'logo_widget.dart';
 
 /// Footer with indigo gradient and working links.
 class LandingFooter extends StatelessWidget {
-  const LandingFooter({
-    super.key,
-    required this.onLinkTap,
-  });
+  const LandingFooter({super.key, required this.onLinkTap});
 
   final void Function(String link) onLinkTap;
 
@@ -39,9 +36,9 @@ class LandingFooter extends StatelessWidget {
                       Text(
                         'Job For All',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                            ),
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                       Text(
                         'Hire with confidence. Work with trust.',
@@ -221,17 +218,26 @@ class _SocialIcons extends StatelessWidget {
         Row(
           children: <Widget>[
             IconButton(
-              icon: Icon(Icons.mail_outline, color: Colors.white.withValues(alpha: 0.9)),
+              icon: Icon(
+                Icons.mail_outline,
+                color: Colors.white.withValues(alpha: 0.9),
+              ),
               onPressed: () => onLinkTap('Contact'),
               tooltip: 'Email',
             ),
             IconButton(
-              icon: Icon(Icons.phone_outlined, color: Colors.white.withValues(alpha: 0.9)),
+              icon: Icon(
+                Icons.phone_outlined,
+                color: Colors.white.withValues(alpha: 0.9),
+              ),
               onPressed: () => onLinkTap('Contact'),
               tooltip: 'Phone',
             ),
             IconButton(
-              icon: Icon(Icons.help_outline, color: Colors.white.withValues(alpha: 0.9)),
+              icon: Icon(
+                Icons.help_outline,
+                color: Colors.white.withValues(alpha: 0.9),
+              ),
               onPressed: () => onLinkTap('Help Center'),
               tooltip: 'Help',
             ),

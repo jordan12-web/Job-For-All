@@ -27,8 +27,9 @@ class _HoverableCardState extends State<HoverableCard> {
   @override
   Widget build(BuildContext context) {
     final AppLayoutTokens layout = AppTheme.layoutOf(context);
-    final double elevation =
-        _hovered ? layout.cardElevationHovered : layout.cardElevation;
+    final double elevation = _hovered
+        ? layout.cardElevationHovered
+        : layout.cardElevation;
 
     Widget content = AnimatedContainer(
       duration: layout.transitionDuration,
@@ -46,8 +47,7 @@ class _HoverableCardState extends State<HoverableCard> {
         ],
       ),
       child: Padding(
-        padding: widget.padding ??
-            EdgeInsets.all(layout.cardPadding),
+        padding: widget.padding ?? EdgeInsets.all(layout.cardPadding),
         child: widget.child,
       ),
     );

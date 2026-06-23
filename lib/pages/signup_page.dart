@@ -23,18 +23,19 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
-  final TextEditingController _nameController            = TextEditingController();
-  final TextEditingController _emailController           = TextEditingController();
-  final TextEditingController _passwordController        = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
-  final TextEditingController _companyNameController     = TextEditingController();
-  final TextEditingController _contactInfoController     = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+  final TextEditingController _companyNameController = TextEditingController();
+  final TextEditingController _contactInfoController = TextEditingController();
 
-  final FocusNode _nameFocus            = FocusNode();
-  final FocusNode _companyFocus         = FocusNode();
-  final FocusNode _contactFocus         = FocusNode();
-  final FocusNode _emailFocus           = FocusNode();
-  final FocusNode _passwordFocus        = FocusNode();
+  final FocusNode _nameFocus = FocusNode();
+  final FocusNode _companyFocus = FocusNode();
+  final FocusNode _contactFocus = FocusNode();
+  final FocusNode _emailFocus = FocusNode();
+  final FocusNode _passwordFocus = FocusNode();
   final FocusNode _confirmPasswordFocus = FocusNode();
 
   String _selectedRole = RoleUtils.jobSeeker;
@@ -134,12 +135,12 @@ class _SignupPageState extends State<SignupPage> {
       _emailError = _validateEmail(_emailController.text.trim());
       _passwordError = _validatePassword(password);
       _formError = null;
-      
+
       // Validate role is selected
       if (_selectedRole.isEmpty) {
         _formError = 'Please select a role.';
       }
-      
+
       // Validate employer-specific fields if employer is selected
       if (_selectedRole == RoleUtils.employer) {
         _companyNameError = _validateCompanyName(_companyNameController.text);
@@ -148,7 +149,7 @@ class _SignupPageState extends State<SignupPage> {
         _companyNameError = null;
         _contactInfoError = null;
       }
-      
+
       if (confirmPassword.isEmpty) {
         _confirmPasswordError = 'Please confirm your password.';
       } else if (confirmPassword != password) {
@@ -182,10 +183,14 @@ class _SignupPageState extends State<SignupPage> {
     final String email = _emailController.text.trim();
     final String companyName = _companyNameController.text.trim();
     final String contactInfo = _contactInfoController.text.trim();
-    
-    debugPrint('🔐 SignupPage: Submitting signup with email=$email, name=$name, role=$_selectedRole');
+
+    debugPrint(
+      '🔐 SignupPage: Submitting signup with email=$email, name=$name, role=$_selectedRole',
+    );
     if (_selectedRole == RoleUtils.employer) {
-      debugPrint('🔐 SignupPage: Employer metadata - company=$companyName, contact=$contactInfo');
+      debugPrint(
+        '🔐 SignupPage: Employer metadata - company=$companyName, contact=$contactInfo',
+      );
     }
 
     final AuthResult result = await AuthService.instance.signUp(
@@ -255,7 +260,8 @@ class _SignupPageState extends State<SignupPage> {
       footer: TextButton(
         onPressed: _isSubmitting
             ? null
-            : () => Navigator.pushReplacementNamed(context, LoginPage.routeName),
+            : () =>
+                  Navigator.pushReplacementNamed(context, LoginPage.routeName),
         child: const Text('Already have an account? Sign in'),
       ),
       child: Column(
@@ -272,9 +278,9 @@ class _SignupPageState extends State<SignupPage> {
           const SizedBox(height: 8),
           Text(
             'Saved to your account after registration completes.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 12),
           LayoutBuilder(
@@ -496,7 +502,9 @@ class _RoleCard extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: selected ? AppColors.indigo.withValues(alpha: 0.08) : Colors.white,
+            color: selected
+                ? AppColors.indigo.withValues(alpha: 0.08)
+                : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: selected ? AppColors.indigo : AppColors.border,

@@ -42,10 +42,10 @@ class HeroSection extends StatelessWidget {
               'Find Your Perfect Job in Ethiopia',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: isMobile ? 32 : 56,
-                  ),
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: isMobile ? 32 : 56,
+              ),
             ),
             const SizedBox(height: 24),
 
@@ -55,9 +55,9 @@ class HeroSection extends StatelessWidget {
               'employers. Verified credentials, local payments, and USSD access.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.95),
-                    fontSize: isMobile ? 16 : 18,
-                  ),
+                color: Colors.white.withValues(alpha: 0.95),
+                fontSize: isMobile ? 16 : 18,
+              ),
             ),
             const SizedBox(height: 48),
 

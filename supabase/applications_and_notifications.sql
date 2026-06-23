@@ -57,15 +57,13 @@ CREATE POLICY applications_update_employer ON public.applications
 -- ── Notifications ───────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS public.notifications (
-  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id        UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  application_id UUID REFERENCES public.applications(id) ON DELETE SET NULL,
-  type           TEXT NOT NULL DEFAULT 'general',
-  title          TEXT NOT NULL,
-  message        TEXT NOT NULL,
-  read           BOOLEAN NOT NULL DEFAULT false,
-  created_by     UUID REFERENCES public.users(id) ON DELETE SET NULL,
-  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  title      TEXT NOT NULL DEFAULT '',
+  message    TEXT NOT NULL,
+  type       TEXT NOT NULL DEFAULT 'general',
+  is_read    BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS notifications_user_id_idx
@@ -82,13 +80,11 @@ CREATE POLICY notifications_select_own ON public.notifications
 CREATE POLICY notifications_insert_employer ON public.notifications
   FOR INSERT
   WITH CHECK (
-    auth.uid() = created_by
-    AND EXISTS (
+    EXISTS (
       SELECT 1
       FROM public.applications a
       JOIN public.jobs j ON j.id = a.job_id
-      WHERE a.id = notifications.application_id
-        AND a.seeker_id = notifications.user_id
+      WHERE a.seeker_id = notifications.user_id
         AND j.employer_id = auth.uid()
     )
   );
@@ -96,4 +92,5 @@ CREATE POLICY notifications_insert_employer ON public.notifications
 -- Users can mark their own notifications as read
 CREATE POLICY notifications_update_own ON public.notifications
   FOR UPDATE
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);

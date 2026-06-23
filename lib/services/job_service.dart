@@ -146,19 +146,17 @@ class JobService {
     );
 
     try {
-      final List<dynamic> result = await _client
-          .from(jobsTable)
-          .insert(<String, dynamic>{
-            'employer_id':  employerId,
-            'title':        title.trim(),
-            'company':      company.trim(),
-            'location':     location.trim(),
-            'type':         type,
-            'description':  description.trim(),
+      final List<dynamic> result =
+          await _client.from(jobsTable).insert(<String, dynamic>{
+            'employer_id': employerId,
+            'title': title.trim(),
+            'company': company.trim(),
+            'location': location.trim(),
+            'type': type,
+            'description': description.trim(),
             'requirements': requirements.trim(),
-            'status':       status,
-          })
-          .select();
+            'status': status,
+          }).select();
 
       if (result.isEmpty) {
         throw Exception('Insert returned no data.');
@@ -261,19 +259,22 @@ class JobService {
     final List<Job> jobs = await fetchApprovedJobs();
     final String kw = keyword.toLowerCase();
     return jobs
-        .where((Job j) =>
-            j.title.toLowerCase().contains(kw) ||
-            j.description.toLowerCase().contains(kw) ||
-            j.requirements.toLowerCase().contains(kw) ||
-            (j.company?.toLowerCase().contains(kw) ?? false) ||
-            (j.location?.toLowerCase().contains(kw) ?? false))
+        .where(
+          (Job j) =>
+              j.title.toLowerCase().contains(kw) ||
+              j.description.toLowerCase().contains(kw) ||
+              j.requirements.toLowerCase().contains(kw) ||
+              (j.company?.toLowerCase().contains(kw) ?? false) ||
+              (j.location?.toLowerCase().contains(kw) ?? false),
+        )
         .toList();
   }
 
   Future<List<Job>> filterJobs({String? location, String? type}) async {
     final List<Job> jobs = await fetchApprovedJobs();
     return jobs.where((Job j) {
-      final bool loc = location == null || location == 'All' || j.location == location;
+      final bool loc =
+          location == null || location == 'All' || j.location == location;
       final bool typ = type == null || type == 'All' || j.type == type;
       return loc && typ;
     }).toList();

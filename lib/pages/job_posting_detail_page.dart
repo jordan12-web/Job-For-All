@@ -57,11 +57,8 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
         throw Exception('Could not identify your account.');
       }
 
-      final List<Application> apps =
-          await ApplicationService.instance.fetchApplicationsForJob(
-        jobId: _job.id,
-        employerId: employerId,
-      );
+      final List<Application> apps = await ApplicationService.instance
+          .fetchApplicationsForJob(jobId: _job.id, employerId: employerId);
 
       if (!mounted) {
         return;
@@ -114,9 +111,7 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          success
-              ? 'Draft submitted for review.'
-              : 'Failed to publish draft.',
+          success ? 'Draft submitted for review.' : 'Failed to publish draft.',
         ),
         behavior: SnackBarBehavior.floating,
         backgroundColor: success ? Colors.green[700] : AppColors.error,
@@ -131,11 +126,8 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
 
     setState(() => _updatingIds.add(app.id));
 
-    final bool success =
-        await ApplicationService.instance.updateApplicationStatus(
-      applicationId: app.id,
-      status: newStatus,
-    );
+    final bool success = await ApplicationService.instance
+        .updateApplicationStatus(applicationId: app.id, status: newStatus);
 
     if (!mounted) {
       return;
@@ -144,8 +136,9 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
     setState(() {
       _updatingIds.remove(app.id);
       if (success) {
-        final int index =
-            _applications.indexWhere((Application a) => a.id == app.id);
+        final int index = _applications.indexWhere(
+          (Application a) => a.id == app.id,
+        );
         if (index != -1) {
           _applications[index] = app.copyWith(status: newStatus);
         }
@@ -174,8 +167,7 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
 
     setState(() => _shortlistingIds.add(app.id));
 
-    final bool success =
-        await NotificationService.instance.scheduleInterview(
+    final bool success = await NotificationService.instance.scheduleInterview(
       seekerId: app.seekerId,
       applicationId: app.id,
       jobTitle: _job.title,
@@ -203,8 +195,8 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
     return switch (status) {
       'Approved' => AppColors.tertiary,
       'Rejected' => AppColors.error,
-      'Draft'    => AppColors.secondary,
-      _          => Colors.orange.shade700,
+      'Draft' => AppColors.secondary,
+      _ => Colors.orange.shade700,
     };
   }
 
@@ -228,8 +220,8 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
                   Text(
                     'Applicants',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -260,10 +252,9 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
                 Expanded(
                   child: Text(
                     _job.title,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w800),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
                 Container(
@@ -293,7 +284,10 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
                 if ((_job.location ?? '').isNotEmpty) _job.location!,
                 if ((_job.type ?? '').isNotEmpty) _job.type!,
               ].join(' · '),
-              style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 16),
             Text(_job.description),
@@ -361,7 +355,8 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
       children: _applications.map((Application app) {
         final bool isUpdating = _updatingIds.contains(app.id);
         final bool isShortlisting = _shortlistingIds.contains(app.id);
-        final String name = app.seekerName ?? app.seekerEmail ?? 'Unknown applicant';
+        final String name =
+            app.seekerName ?? app.seekerEmail ?? 'Unknown applicant';
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
@@ -375,15 +370,16 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
                     children: <Widget>[
                       CircleAvatar(
                         radius: 20,
-                        backgroundColor:
-                            Theme.of(context).colorScheme.primaryContainer,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.primaryContainer,
                         child: Text(
                           name.isNotEmpty ? name[0].toUpperCase() : '?',
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onPrimaryContainer,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onPrimaryContainer,
                           ),
                         ),
                       ),
@@ -394,7 +390,9 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
                           children: <Widget>[
                             Text(
                               name,
-                              style: const TextStyle(fontWeight: FontWeight.w700),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                             if (app.seekerEmail != null)
                               Text(
@@ -429,8 +427,9 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
                           ),
                         ),
                         OutlinedButton.icon(
-                          onPressed:
-                              isShortlisting ? null : () => _scheduleInterview(app),
+                          onPressed: isShortlisting
+                              ? null
+                              : () => _scheduleInterview(app),
                           icon: isShortlisting
                               ? const SizedBox(
                                   width: 14,
@@ -441,7 +440,9 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
                                 )
                               : const Icon(Icons.event_outlined, size: 16),
                           label: Text(
-                            isShortlisting ? 'Sending…' : 'Shortlist / Schedule',
+                            isShortlisting
+                                ? 'Sending…'
+                                : 'Shortlist / Schedule',
                           ),
                         ),
                         FilledButton.icon(

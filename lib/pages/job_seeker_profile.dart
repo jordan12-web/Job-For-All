@@ -26,9 +26,9 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
   final TextEditingController _educationController = TextEditingController();
   final TextEditingController _documentController = TextEditingController();
 
-  final FocusNode _nameFocus     = FocusNode();
-  final FocusNode _contactFocus  = FocusNode();
-  final FocusNode _skillsFocus   = FocusNode();
+  final FocusNode _nameFocus = FocusNode();
+  final FocusNode _contactFocus = FocusNode();
+  final FocusNode _skillsFocus = FocusNode();
   final FocusNode _educationFocus = FocusNode();
   final FocusNode _documentFocus = FocusNode();
 

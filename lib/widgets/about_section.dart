@@ -22,18 +22,18 @@ class AboutSection extends StatelessWidget {
           // Section title
           Text(
             'About Job For All',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
 
           // Section subtitle
           Text(
             'Bridging the gap between Ethiopian talent and opportunity',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
           ),
           const SizedBox(height: 40),
 
@@ -48,9 +48,9 @@ class AboutSection extends StatelessWidget {
               'We connect job seekers with verified employers, providing a secure and accessible platform '
               'that works for everyone—regardless of internet connectivity.',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    height: 1.6,
-                    color: Colors.grey[700],
-                  ),
+                height: 1.6,
+                color: Colors.grey[700],
+              ),
             ),
           ),
           const SizedBox(height: 40),
@@ -63,17 +63,20 @@ class AboutSection extends StatelessWidget {
               _DifferentiatorCard(
                 icon: Icons.dialpad_outlined,
                 title: 'USSD Access',
-                description: 'Search jobs and apply using USSD—no app or data required.',
+                description:
+                    'Search jobs and apply using USSD—no app or data required.',
               ),
               _DifferentiatorCard(
                 icon: Icons.verified_user_outlined,
                 title: 'Verified Credentials',
-                description: 'Every job seeker and employer is verified for trust and safety.',
+                description:
+                    'Every job seeker and employer is verified for trust and safety.',
               ),
               _DifferentiatorCard(
                 icon: Icons.attach_money_outlined,
                 title: 'Local Payments',
-                description: 'Secure transactions using local payment methods (M-Pesa, bank transfer).',
+                description:
+                    'Secure transactions using local payment methods (M-Pesa, bank transfer).',
               ),
             ],
           ),
@@ -109,7 +112,9 @@ class _DifferentiatorCard extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -121,17 +126,17 @@ class _DifferentiatorCard extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Text(
             description,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                  height: 1.5,
-                ),
+              color: Colors.grey[600],
+              height: 1.5,
+            ),
           ),
         ],
       ),

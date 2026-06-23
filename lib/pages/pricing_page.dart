@@ -62,9 +62,9 @@ class _PricingPageState extends State<PricingPage> {
                 Text(
                   'Choose Your Job Posting Plan',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
-                      ),
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
@@ -198,9 +198,9 @@ class _PricingCard extends StatelessWidget {
               Text(
                 plan.name,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
-                    ),
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -219,9 +219,9 @@ class _PricingCard extends StatelessWidget {
                   Text(
                     'ETB ${plan.priceETB.toStringAsFixed(0)}',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.tertiary,
-                        ),
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.tertiary,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Text(

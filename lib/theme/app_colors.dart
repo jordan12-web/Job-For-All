@@ -15,38 +15,38 @@ abstract final class AppColors {
   static const Color background = Color(0xFFF8F9FA);
 
   // ── Semantic aliases (used throughout the app) ───────────
-  static const Color primary   = navy;
-  static const Color tertiary  = sky;
+  static const Color primary = navy;
+  static const Color tertiary = sky;
   static const Color secondary = Color(0xFF5A5A7A);
 
   // ── Surfaces ─────────────────────────────────────────────
-  static const Color surface      = background;
+  static const Color surface = background;
   static const Color surfaceWhite = Color(0xFFFFFFFF);
-  static const Color border       = Color(0xFFE2E4EA);
-  static const Color borderFocus  = sky;
+  static const Color border = Color(0xFFE2E4EA);
+  static const Color borderFocus = sky;
 
   // ── Text ─────────────────────────────────────────────────
-  static const Color textPrimary   = navy;
+  static const Color textPrimary = navy;
   static const Color textSecondary = secondary;
-  static const Color textHint      = Color(0xFF9A9AB0);
+  static const Color textHint = Color(0xFF9A9AB0);
 
   // ── Semantic ─────────────────────────────────────────────
   static const Color success = Color(0xFF0E9F6E);
   static const Color warning = Color(0xFFB7791F);
-  static const Color error   = Color(0xFFC23B33);
+  static const Color error = Color(0xFFC23B33);
 
   // ── Tints ────────────────────────────────────────────────
   static const Color skyLight = Color(0xFFE6F7FD);
   static const Color navyLight = Color(0xFFE8E8F0);
 
   // ── Backwards-compatible aliases ─────────────────────────
-  static const Color navyMid      = navy;
-  static const Color skyDark      = Color(0xFF0088C2);
-  static const Color indigo       = navy;
-  static const Color indigoDark   = navy;
+  static const Color navyMid = navy;
+  static const Color skyDark = Color(0xFF0088C2);
+  static const Color indigo = navy;
+  static const Color indigoDark = navy;
   static const Color indigoDarker = navy;
-  static const Color amber        = sky;
-  static const Color amberSoft    = skyLight;
+  static const Color amber = sky;
+  static const Color amberSoft = skyLight;
 
   static const LinearGradient navyGradient = LinearGradient(
     colors: <Color>[navy, navy],

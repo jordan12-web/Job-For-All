@@ -23,16 +23,16 @@ class JobPostingPage extends StatefulWidget {
 }
 
 class _JobPostingPageState extends State<JobPostingPage> {
-  final TextEditingController _titleController       = TextEditingController();
-  final TextEditingController _companyController     = TextEditingController();
-  final TextEditingController _locationController    = TextEditingController();
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _companyController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _requirementsController = TextEditingController();
 
-  final FocusNode _titleFocus        = FocusNode();
-  final FocusNode _companyFocus      = FocusNode();
-  final FocusNode _locationFocus     = FocusNode();
-  final FocusNode _descriptionFocus  = FocusNode();
+  final FocusNode _titleFocus = FocusNode();
+  final FocusNode _companyFocus = FocusNode();
+  final FocusNode _locationFocus = FocusNode();
+  final FocusNode _descriptionFocus = FocusNode();
   final FocusNode _requirementsFocus = FocusNode();
 
   String _selectedJobType = MockJobStore.jobTypes.first;
@@ -95,11 +95,11 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
     try {
       await JobService.instance.createJob(
-        title:        _titleController.text.trim(),
-        company:      _companyController.text.trim(),
-        location:     _locationController.text.trim(),
-        type:         _selectedJobType,
-        description:  _descriptionController.text.trim(),
+        title: _titleController.text.trim(),
+        company: _companyController.text.trim(),
+        location: _locationController.text.trim(),
+        type: _selectedJobType,
+        description: _descriptionController.text.trim(),
         requirements: _requirementsController.text.trim(),
       );
 
@@ -147,9 +147,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-          ),
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Theme.of(context).colorScheme.error,
           duration: const Duration(seconds: 5),
@@ -178,10 +176,9 @@ class _JobPostingPageState extends State<JobPostingPage> {
                   children: <Widget>[
                     Text(
                       'Job Details',
-                      style:
-                          Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'models/user_profile.dart';
@@ -111,7 +111,9 @@ class _JobForAllAppState extends State<JobForAllApp> {
 
       // CRITICAL: Set RoleUtils BEFORE setState so HomePage can access the role/tabs
       if (profile != null) {
-        DebugLogger.info('Setting RoleUtils from profile: role=${profile.role}');
+        DebugLogger.info(
+          'Setting RoleUtils from profile: role=${profile.role}',
+        );
         RoleUtils.setSession(profile: profile);
       }
 
@@ -271,8 +273,7 @@ class _JobForAllAppState extends State<JobForAllApp> {
     }
 
     if (settings.name == JobPostingPage.routeName) {
-      final PricingPlan? selectedPlan =
-          args is PricingPlan ? args : null;
+      final PricingPlan? selectedPlan = args is PricingPlan ? args : null;
       return MaterialPageRoute<void>(
         builder: (_) => JobPostingPage(selectedPlan: selectedPlan),
       );
@@ -295,8 +296,7 @@ class _JobForAllAppState extends State<JobForAllApp> {
     }
 
     if (settings.name == JobPostingPaymentPage.routeName) {
-      final PricingPlan? selectedPlan =
-          args is PricingPlan ? args : null;
+      final PricingPlan? selectedPlan = args is PricingPlan ? args : null;
       if (selectedPlan == null) {
         DebugLogger.warning(
           'JobPostingPaymentPage requires PricingPlan argument',

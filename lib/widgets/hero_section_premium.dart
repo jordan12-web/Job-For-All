@@ -27,7 +27,9 @@ class PremiumHeroSection extends StatelessWidget {
         isMobile ? 20 : 60,
         isMobile ? 48 : 80,
       ),
-      child: isMobile ? _buildMobileLayout(headlineSize) : _buildDesktopLayout(headlineSize),
+      child: isMobile
+          ? _buildMobileLayout(headlineSize)
+          : _buildDesktopLayout(headlineSize),
     );
   }
 
@@ -183,7 +185,10 @@ class PremiumHeroSection extends StatelessWidget {
           spacing: 10,
           runSpacing: 10,
           children: <Widget>[
-            _TrustTag(icon: Icons.verified_user_outlined, label: 'Verified talent'),
+            _TrustTag(
+              icon: Icons.verified_user_outlined,
+              label: 'Verified talent',
+            ),
             _TrustTag(icon: Icons.dialpad_outlined, label: 'USSD ready'),
             _TrustTag(icon: Icons.payments_outlined, label: 'Local payments'),
           ],

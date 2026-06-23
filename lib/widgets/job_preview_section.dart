@@ -96,15 +96,15 @@ class _JobPreviewSectionState extends State<JobPreviewSection> {
               Text(
                 'Search Jobs',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Type a role, skill, or company — suggestions appear as you search.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: 28),
               Column(
@@ -179,7 +179,8 @@ class _JobPreviewSectionState extends State<JobPreviewSection> {
     if (_suggestions.isEmpty && _query.isNotEmpty) {
       return _EmptyPrompt(
         icon: Icons.work_off_outlined,
-        message: 'No matches for “$_query”. Try another keyword or browse all jobs.',
+        message:
+            'No matches for “$_query”. Try another keyword or browse all jobs.',
       );
     }
 
@@ -266,9 +267,9 @@ class _EmptyPrompt extends StatelessWidget {
             child: Text(
               message,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                    height: 1.5,
-                  ),
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
             ),
           ),
         ],

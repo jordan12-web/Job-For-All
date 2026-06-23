@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'recruitment_hub_page.dart';
-import '../data/mock_notification_store.dart';
 import '../pages/landing_page.dart';
 import '../services/auth_service.dart';
 import '../utils/role_utils.dart';
@@ -119,16 +118,19 @@ class _HomePageState extends State<HomePage> {
         RoleUtils.isEmployer()
             ? const EmployerProfile()
             : const JobSeekerProfile(),
-      'notifications' => _NotificationsTab(
-        onMarkAllRead: () {
-          setState(MockNotificationStore.markAllRead);
-        },
-      ),
+      'notifications' => const _NotificationsTab(),
       'ussd' => const UssdSimulationPage(showAppBar: false),
       'postJob' => const RecruitmentHubPage(showAppBar: false),
       'applicants' => const ApplicantsPage(showAppBar: false),
       'payments' => const PaymentPage(showAppBar: false),
-      'admin' || 'moderation' => const AdminDashboard(showAppBar: false),
+      'admin' => const AdminDashboard(
+        showAppBar: false,
+        mode: AdminDashboardMode.overview,
+      ),
+      'moderation' => const AdminDashboard(
+        showAppBar: false,
+        mode: AdminDashboardMode.moderation,
+      ),
       _ => const JobListingPage(showAppBar: false),
     };
   }
@@ -152,7 +154,17 @@ class _HomePageState extends State<HomePage> {
             },
             onLogout: () => _logout(context),
           ),
-          Expanded(child: _buildCurrentTab()),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              child: KeyedSubtree(
+                key: ValueKey<int>(_selectedTab),
+                child: _buildCurrentTab(),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -325,15 +337,13 @@ class _DashboardTab extends StatelessWidget {
 }
 
 class _NotificationsTab extends StatelessWidget {
-  const _NotificationsTab({required this.onMarkAllRead});
-
-  final VoidCallback onMarkAllRead;
+  const _NotificationsTab();
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
-      child: Center(child: NotificationPanel(onMarkAllRead: onMarkAllRead)),
+      child: const Center(child: NotificationPanel()),
     );
   }
 }

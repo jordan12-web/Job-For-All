@@ -27,7 +27,9 @@ class TransactionTable extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 child: DataTable(
                   headingRowColor: WidgetStateProperty.all(
-                    Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                    Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.08),
                   ),
                   columns: const <DataColumn>[
                     DataColumn(label: Text('Date')),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../data/mock_notification_store.dart';
 import '../pages/login_page.dart';
+import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/role_utils.dart';
 import 'logo_widget.dart';
@@ -39,7 +39,9 @@ class TopNavBar extends StatefulWidget {
 }
 
 class _TopNavBarState extends State<TopNavBar> {
-  bool _showNotifications = false;
+  int _notificationRefreshKey = 0;
+  OverlayEntry? _notificationOverlay;
+  final LayerLink _notificationLayerLink = LayerLink();
 
   static const List<_GuestNavItem> _guestItems = <_GuestNavItem>[
     _GuestNavItem(key: 'home', label: 'Landing', icon: Icons.home_outlined),
@@ -50,19 +52,70 @@ class _TopNavBarState extends State<TopNavBar> {
       label: 'How It Works',
       icon: Icons.route_outlined,
     ),
-    _GuestNavItem(
-      key: 'profile',
-      label: 'Profile',
-      icon: Icons.person_outline,
-    ),
+    _GuestNavItem(key: 'profile', label: 'Profile', icon: Icons.person_outline),
   ];
 
-  void _toggleNotifications() {
-    setState(() => _showNotifications = !_showNotifications);
+  @override
+  void dispose() {
+    _removeNotificationOverlay();
+    super.dispose();
   }
 
-  void _markAllNotificationsRead() {
-    setState(MockNotificationStore.markAllRead);
+  void _toggleNotifications() {
+    if (_notificationOverlay != null) {
+      _removeNotificationOverlay();
+      return;
+    }
+    _showNotificationOverlay();
+  }
+
+  void _refreshNotificationBadge() {
+    setState(() {
+      _notificationRefreshKey++;
+    });
+  }
+
+  void _removeNotificationOverlay() {
+    _notificationOverlay?.remove();
+    _notificationOverlay = null;
+  }
+
+  void _showNotificationOverlay() {
+    final OverlayState? overlay = Overlay.maybeOf(context);
+    if (overlay == null) {
+      return;
+    }
+
+    _notificationOverlay = OverlayEntry(
+      builder: (BuildContext context) {
+        return Stack(
+          children: <Widget>[
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: _removeNotificationOverlay,
+                child: const SizedBox.expand(),
+              ),
+            ),
+            CompositedTransformFollower(
+              link: _notificationLayerLink,
+              showWhenUnlinked: false,
+              targetAnchor: Alignment.bottomRight,
+              followerAnchor: Alignment.topRight,
+              offset: const Offset(0, 10),
+              child: Material(
+                color: Colors.transparent,
+                child: NotificationPanel(
+                  onNotificationsChanged: _refreshNotificationBadge,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    overlay.insert(_notificationOverlay!);
   }
 
   void _handleGuestTap(String key) {
@@ -101,9 +154,7 @@ class _TopNavBarState extends State<TopNavBar> {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border(
-            bottom: BorderSide(color: Colors.grey.shade200),
-          ),
+          border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
           boxShadow: widget.isGuestMode
               ? <BoxShadow>[
                   BoxShadow(
@@ -121,36 +172,20 @@ class _TopNavBarState extends State<TopNavBar> {
               final bool compact = constraints.maxWidth < 980;
 
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1200),
-                    child: Stack(
-                      clipBehavior: Clip.none,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
-                        // Main nav header — never shifts when panel opens
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            if (compact)
-                              _buildCompactHeader(roleItems)
-                            else
-                              _buildDesktopHeader(roleItems),
-                          ],
-                        ),
-                        // Notification panel floats OVER page content.
-                        // Clip.none + Positioned.fill lets it extend beyond
-                        // the navbar bounds without affecting layout.
-                        if (_showNotifications &&
-                            !widget.isGuestMode &&
-                            RoleUtils.isJobSeeker())
-                          Positioned(
-                            top: compact ? 90 : 52,
-                            right: 0,
-                            child: NotificationPanel(
-                              onMarkAllRead: _markAllNotificationsRead,
-                            ),
-                          ),
+                        if (compact)
+                          _buildCompactHeader(roleItems)
+                        else
+                          _buildDesktopHeader(roleItems),
                       ],
                     ),
                   ),
@@ -248,7 +283,10 @@ class _TopNavBarState extends State<TopNavBar> {
     );
   }
 
-  Widget _buildTrailingActions(List<RoleNavItem> roleItems, {bool compact = false}) {
+  Widget _buildTrailingActions(
+    List<RoleNavItem> roleItems, {
+    bool compact = false,
+  }) {
     if (widget.isGuestMode) {
       return Row(
         mainAxisSize: MainAxisSize.min,
@@ -316,7 +354,13 @@ class _TopNavBarState extends State<TopNavBar> {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         if (RoleUtils.isJobSeeker())
-          _NotificationBell(onPressed: _toggleNotifications),
+          CompositedTransformTarget(
+            link: _notificationLayerLink,
+            child: _NotificationBell(
+              refreshKey: _notificationRefreshKey,
+              onPressed: _toggleNotifications,
+            ),
+          ),
         if (!widget.showLoginButton && roleItems.isNotEmpty)
           IconButton(
             tooltip: 'Logout',
@@ -366,16 +410,16 @@ class _BrandBlock extends StatelessWidget {
             Text(
               'Job For All',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.indigo,
-                  ),
+                fontWeight: FontWeight.w800,
+                color: AppColors.indigo,
+              ),
             ),
             Text(
               isGuest ? 'Find work. Hire talent.' : RoleUtils.currentRole,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.black54,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: Colors.black54,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -398,42 +442,52 @@ class _BrandBlock extends StatelessWidget {
 }
 
 class _NotificationBell extends StatelessWidget {
-  const _NotificationBell({required this.onPressed});
+  const _NotificationBell({required this.refreshKey, required this.onPressed});
 
+  final int refreshKey;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final int unreadCount = MockNotificationStore.unreadCount;
+    return FutureBuilder<int>(
+      key: ValueKey<int>(refreshKey),
+      future: NotificationService.instance.fetchUnreadCount(),
+      builder: (BuildContext context, AsyncSnapshot<int> snapshot) {
+        final int unreadCount = snapshot.data ?? 0;
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: <Widget>[
-        IconButton(
-          tooltip: 'Notifications',
-          onPressed: onPressed,
-          icon: const Icon(Icons.notifications_outlined),
-        ),
-        if (unreadCount > 0)
-          Positioned(
-            right: 6,
-            top: 6,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.secondary,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                unreadCount > 9 ? '9+' : '$unreadCount',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
+        return Stack(
+          clipBehavior: Clip.none,
+          children: <Widget>[
+            IconButton(
+              tooltip: 'Notifications',
+              onPressed: onPressed,
+              icon: const Icon(Icons.notifications_outlined),
+            ),
+            if (unreadCount > 0)
+              Positioned(
+                right: 6,
+                top: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.secondary,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    unreadCount > 9 ? '9+' : '$unreadCount',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
@@ -469,20 +523,16 @@ class _NavLink extends StatelessWidget {
             vertical: 10,
           ),
           decoration: BoxDecoration(
-            color: selected ? primary.withValues(alpha: 0.10) : Colors.transparent,
+            color: selected
+                ? primary.withValues(alpha: 0.10)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: selected ? primary : Colors.transparent,
-            ),
+            border: Border.all(color: selected ? primary : Colors.transparent),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Icon(
-                icon,
-                color: selected ? primary : Colors.black54,
-                size: 20,
-              ),
+              Icon(icon, color: selected ? primary : Colors.black54, size: 20),
               if (!compact || selected) ...<Widget>[
                 const SizedBox(width: 8),
                 Text(

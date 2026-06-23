@@ -76,7 +76,10 @@ class MockJobStore {
       .where((Map<String, String> j) => (j['status'] ?? '') == 'Approved')
       .toList();
 
-  static List<Map<String, String>> searchSuggestions(String query, {int limit = 8}) {
+  static List<Map<String, String>> searchSuggestions(
+    String query, {
+    int limit = 8,
+  }) {
     final String keyword = query.trim().toLowerCase();
     if (keyword.isEmpty) {
       return <Map<String, String>>[];

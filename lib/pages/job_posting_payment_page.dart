@@ -21,10 +21,7 @@ class PaymentMethod {
 }
 
 class JobPostingPaymentPage extends StatefulWidget {
-  const JobPostingPaymentPage({
-    super.key,
-    required this.selectedPlan,
-  });
+  const JobPostingPaymentPage({super.key, required this.selectedPlan});
 
   static const String routeName = '/job-posting-payment';
 
@@ -135,9 +132,7 @@ class _JobPostingPaymentPageState extends State<JobPostingPaymentPage> {
                       children: <Widget>[
                         Text(
                           'Order Summary',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
+                          style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 20),
@@ -187,16 +182,12 @@ class _JobPostingPaymentPageState extends State<JobPostingPaymentPage> {
                           children: <Widget>[
                             Text(
                               'Total',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
+                              style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(fontWeight: FontWeight.w700),
                             ),
                             Text(
                               'ETB ${widget.selectedPlan.priceETB.toStringAsFixed(0)}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
+                              style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: AppColors.tertiary,
@@ -215,9 +206,9 @@ class _JobPostingPaymentPageState extends State<JobPostingPaymentPage> {
                 Text(
                   'Select Payment Method',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
-                      ),
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary,
+                  ),
                 ),
 
                 const SizedBox(height: 16),
@@ -226,12 +217,17 @@ class _JobPostingPaymentPageState extends State<JobPostingPaymentPage> {
                 if (isWide)
                   Row(
                     children: <Widget>[
-                      for (int i = 0; i < _paymentMethods.length; i++) ...<Widget>[
+                      for (
+                        int i = 0;
+                        i < _paymentMethods.length;
+                        i++
+                      ) ...<Widget>[
                         Expanded(
                           child: _PaymentMethodCard(
                             method: _paymentMethods[i],
                             isSelected:
-                                _selectedPaymentMethodId == _paymentMethods[i].id,
+                                _selectedPaymentMethodId ==
+                                _paymentMethods[i].id,
                             onSelect: () =>
                                 _selectPaymentMethod(_paymentMethods[i].id),
                           ),
@@ -244,7 +240,11 @@ class _JobPostingPaymentPageState extends State<JobPostingPaymentPage> {
                 else
                   Column(
                     children: <Widget>[
-                      for (int i = 0; i < _paymentMethods.length; i++) ...<Widget>[
+                      for (
+                        int i = 0;
+                        i < _paymentMethods.length;
+                        i++
+                      ) ...<Widget>[
                         _PaymentMethodCard(
                           method: _paymentMethods[i],
                           isSelected:
@@ -348,25 +348,21 @@ class _PaymentMethodCard extends StatelessWidget {
               Icon(
                 method.icon,
                 size: 48,
-                color:
-                    isSelected ? AppColors.tertiary : AppColors.secondary,
+                color: isSelected ? AppColors.tertiary : AppColors.secondary,
               ),
               const SizedBox(height: 16),
               Text(
                 method.name,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary,
-                    ),
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 method.description,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
               const SizedBox(height: 16),
               Container(

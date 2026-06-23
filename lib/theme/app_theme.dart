@@ -36,15 +36,15 @@ class AppLayoutTokens extends ThemeExtension<AppLayoutTokens> {
   final Duration transitionDuration;
 
   static const AppLayoutTokens defaults = AppLayoutTokens(
-    pagePadding:           28,
-    cardPadding:           28,
-    fieldSpacing:          20,
-    sectionSpacing:        32,
-    cardRadius:            14,
-    buttonRadius:          10,
-    cardElevation:         1,
-    cardElevationHovered:  6,
-    transitionDuration:    Duration(milliseconds: 120),
+    pagePadding: 28,
+    cardPadding: 28,
+    fieldSpacing: 20,
+    sectionSpacing: 32,
+    cardRadius: 14,
+    buttonRadius: 10,
+    cardElevation: 1,
+    cardElevationHovered: 6,
+    transitionDuration: Duration(milliseconds: 120),
   );
 
   @override
@@ -60,16 +60,15 @@ class AppLayoutTokens extends ThemeExtension<AppLayoutTokens> {
     Duration? transitionDuration,
   }) {
     return AppLayoutTokens(
-      pagePadding:          pagePadding          ?? this.pagePadding,
-      cardPadding:          cardPadding          ?? this.cardPadding,
-      fieldSpacing:       fieldSpacing         ?? this.fieldSpacing,
-      sectionSpacing:     sectionSpacing       ?? this.sectionSpacing,
-      cardRadius:         cardRadius           ?? this.cardRadius,
-      buttonRadius:       buttonRadius         ?? this.buttonRadius,
-      cardElevation:      cardElevation        ?? this.cardElevation,
-      cardElevationHovered:
-          cardElevationHovered ?? this.cardElevationHovered,
-      transitionDuration: transitionDuration   ?? this.transitionDuration,
+      pagePadding: pagePadding ?? this.pagePadding,
+      cardPadding: cardPadding ?? this.cardPadding,
+      fieldSpacing: fieldSpacing ?? this.fieldSpacing,
+      sectionSpacing: sectionSpacing ?? this.sectionSpacing,
+      cardRadius: cardRadius ?? this.cardRadius,
+      buttonRadius: buttonRadius ?? this.buttonRadius,
+      cardElevation: cardElevation ?? this.cardElevation,
+      cardElevationHovered: cardElevationHovered ?? this.cardElevationHovered,
+      transitionDuration: transitionDuration ?? this.transitionDuration,
     );
   }
 
@@ -79,15 +78,15 @@ class AppLayoutTokens extends ThemeExtension<AppLayoutTokens> {
       return this;
     }
     return AppLayoutTokens(
-      pagePadding:          pagePadding,
-      cardPadding:          cardPadding,
-      fieldSpacing:         fieldSpacing,
-      sectionSpacing:       sectionSpacing,
-      cardRadius:           cardRadius,
-      buttonRadius:         buttonRadius,
-      cardElevation:        cardElevation,
+      pagePadding: pagePadding,
+      cardPadding: cardPadding,
+      fieldSpacing: fieldSpacing,
+      sectionSpacing: sectionSpacing,
+      cardRadius: cardRadius,
+      buttonRadius: buttonRadius,
+      cardElevation: cardElevation,
       cardElevationHovered: cardElevationHovered,
-      transitionDuration:   transitionDuration,
+      transitionDuration: transitionDuration,
     );
   }
 }
@@ -105,10 +104,7 @@ class _FastFadePageTransitionsBuilder extends PageTransitionsBuilder {
     Widget child,
   ) {
     return FadeTransition(
-      opacity: CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOut,
-      ),
+      opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
       child: child,
     );
   }
@@ -356,9 +352,7 @@ abstract final class AppTheme {
           fontSize: 12,
         ),
         side: const BorderSide(color: AppColors.border),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       ),
 
@@ -382,11 +376,11 @@ abstract final class AppTheme {
       // ── Page transitions — fast fade for lightweight feel ─
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: <TargetPlatform, PageTransitionsBuilder>{
-          TargetPlatform.android:  _FastFadePageTransitionsBuilder(),
-          TargetPlatform.iOS:      _FastFadePageTransitionsBuilder(),
-          TargetPlatform.linux:    _FastFadePageTransitionsBuilder(),
-          TargetPlatform.macOS:    _FastFadePageTransitionsBuilder(),
-          TargetPlatform.windows:  _FastFadePageTransitionsBuilder(),
+          TargetPlatform.android: _FastFadePageTransitionsBuilder(),
+          TargetPlatform.iOS: _FastFadePageTransitionsBuilder(),
+          TargetPlatform.linux: _FastFadePageTransitionsBuilder(),
+          TargetPlatform.macOS: _FastFadePageTransitionsBuilder(),
+          TargetPlatform.windows: _FastFadePageTransitionsBuilder(),
         },
       ),
     );

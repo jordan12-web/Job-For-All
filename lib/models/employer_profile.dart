@@ -30,17 +30,17 @@ class EmployerProfile {
     final dynamic usersJoin = map['users'];
 
     return EmployerProfile(
-      id:          map['id']            as String,
-      companyName: map['company_name']  as String? ?? '',
-      contactInfo: map['contact_info']  as String? ?? '',
+      id: map['id'] as String,
+      companyName: map['company_name'] as String? ?? '',
+      contactInfo: map['contact_info'] as String? ?? '',
       businessRegistrationNumber:
           map['business_registration_number'] as String?,
-      isVerified:  map['is_verified']   as bool?   ?? false,
+      isVerified: map['is_verified'] as bool? ?? false,
       subscriptionPlan: map['subscription_plan'] as String? ?? 'None',
       createdAt: map['created_at'] is String
           ? DateTime.parse(map['created_at'] as String)
           : DateTime.now(),
-      ownerName:  usersJoin is Map ? usersJoin['name']  as String? : null,
+      ownerName: usersJoin is Map ? usersJoin['name'] as String? : null,
       ownerEmail: usersJoin is Map ? usersJoin['email'] as String? : null,
     );
   }

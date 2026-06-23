@@ -11,10 +11,18 @@ import '../utils/role_utils.dart';
 ///   flutter build web --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
 /// Used in production (Vercel) where no .env file exists in the build
 /// environment. Empty string if not provided at build time.
-const String _dartDefineSupabaseUrl =
-    String.fromEnvironment('SUPABASE_URL', defaultValue: '');
-const String _dartDefineSupabaseAnonKey =
-    String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
+const String _dartDefineSupabaseUrl = String.fromEnvironment(
+  'SUPABASE_URL',
+  defaultValue: '',
+);
+const String _dartDefineSupabaseAnonKey = String.fromEnvironment(
+  'SUPABASE_ANON_KEY',
+  defaultValue: '',
+);
+const String _dartDefineAppUrl = String.fromEnvironment(
+  'APP_URL',
+  defaultValue: '',
+);
 
 /// Result wrapper for auth operations.
 class AuthResult {
@@ -199,6 +207,7 @@ class AuthService {
         email: trimmedEmail,
         password: password,
         data: metadata,
+        emailRedirectTo: _emailConfirmationRedirectUrl(),
       );
 
       final User? user = response.user;
@@ -410,11 +419,13 @@ class AuthService {
   /// Pass the initial tab key so [HomePage] opens the right section.
   Object? dashboardArgumentsForRole(String dbRole) {
     final String tabKey = switch (dbRole) {
-      'admin'    => 'admin',
+      'admin' => 'admin',
       'employer' => 'home',
-      _          => 'jobs',
+      _ => 'jobs',
     };
-    DebugLogger.info('dashboardArgumentsForRole: tabKey=$tabKey for dbRole=$dbRole');
+    DebugLogger.info(
+      'dashboardArgumentsForRole: tabKey=$tabKey for dbRole=$dbRole',
+    );
     return HomePageArgs(initialTabKey: tabKey);
   }
 
@@ -446,6 +457,19 @@ class AuthService {
     return e.message.isNotEmpty
         ? e.message
         : 'Database error. Please try again.';
+  }
+
+  String _emailConfirmationRedirectUrl() {
+    final String configuredUrl = _dartDefineAppUrl.trim();
+    final Uri baseUri = configuredUrl.isNotEmpty
+        ? Uri.parse(configuredUrl)
+        : Uri.base;
+    final Uri normalizedBase = baseUri.replace(
+      path: '',
+      query: null,
+      fragment: null,
+    );
+    return normalizedBase.resolve(LoginPage.routeName).toString();
   }
 }
 

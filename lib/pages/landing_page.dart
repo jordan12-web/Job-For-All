@@ -110,9 +110,7 @@ class _LandingPageState extends State<LandingPage> {
           return;
         }
         Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => StaticInfoPage(data: data),
-          ),
+          MaterialPageRoute<void>(builder: (_) => StaticInfoPage(data: data)),
         );
     }
   }
@@ -165,13 +163,11 @@ class _LandingPageState extends State<LandingPage> {
                       KeyedSubtree(
                         key: _jobsKey,
                         child: JobPreviewSection(
-                          onViewAllJobs: () => _navigateTo(JobListingPage.routeName),
+                          onViewAllJobs: () =>
+                              _navigateTo(JobListingPage.routeName),
                         ),
                       ),
-                      KeyedSubtree(
-                        key: _aboutKey,
-                        child: const AboutSection(),
-                      ),
+                      KeyedSubtree(key: _aboutKey, child: const AboutSection()),
                       KeyedSubtree(
                         key: _howItWorksKey,
                         child: const HowItWorksSection(),

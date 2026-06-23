@@ -37,17 +37,9 @@ class PaymentPage extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Payment summary cards
-            _buildSummaryCard(
-              'Total Paid',
-              '₾ 0.00',
-              AppColors.primary,
-            ),
+            _buildSummaryCard('Total Paid', '₾ 0.00', AppColors.primary),
             const SizedBox(height: 16),
-            _buildSummaryCard(
-              'Active Subscriptions',
-              '0',
-              AppColors.tertiary,
-            ),
+            _buildSummaryCard('Active Subscriptions', '0', AppColors.tertiary),
             const SizedBox(height: 32),
 
             // Payment methods section
@@ -79,10 +71,7 @@ class PaymentPage extends StatelessWidget {
                   const SizedBox(height: 12),
                   Text(
                     'No transactions yet',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppColors.secondary,
-                    ),
+                    style: TextStyle(fontSize: 16, color: AppColors.secondary),
                   ),
                   const SizedBox(height: 12),
                   CommonButton(
@@ -166,18 +155,17 @@ class PaymentPage extends StatelessWidget {
                 ),
                 const Text(
                   'Payment method',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.secondary,
-                  ),
+                  style: TextStyle(fontSize: 12, color: AppColors.secondary),
                 ),
               ],
             ),
           ),
-          Icon(Icons.chevron_right, color: AppColors.secondary.withValues(alpha: 0.5)),
+          Icon(
+            Icons.chevron_right,
+            color: AppColors.secondary.withValues(alpha: 0.5),
+          ),
         ],
       ),
     );
   }
 }
-

@@ -9,6 +9,8 @@ class UssdMenu extends StatelessWidget {
     _UssdOption(code: '1', title: 'Search Jobs', icon: Icons.search),
     _UssdOption(code: '2', title: 'Apply', icon: Icons.send),
     _UssdOption(code: '3', title: 'Check Status', icon: Icons.fact_check),
+    _UssdOption(code: '4', title: 'Employer Help', icon: Icons.business),
+    _UssdOption(code: '5', title: 'Support', icon: Icons.support_agent),
   ];
 
   @override

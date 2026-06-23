@@ -82,7 +82,7 @@ class _FloatingNavBarState extends State<FloatingNavBar> {
               ],
             ),
           ),
-          
+
           // Navigation tabs
           Row(
             children: navTabs.map((tab) {
@@ -94,7 +94,7 @@ class _FloatingNavBarState extends State<FloatingNavBar> {
               );
             }).toList(),
           ),
-          
+
           // Auth buttons
           Row(
             children: [
@@ -102,10 +102,7 @@ class _FloatingNavBarState extends State<FloatingNavBar> {
               OutlinedButton(
                 onPressed: widget.onSignInPressed,
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(
-                    color: Color(0xFF4C63FF),
-                    width: 1.5,
-                  ),
+                  side: const BorderSide(color: Color(0xFF4C63FF), width: 1.5),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(25),
                   ),
@@ -123,7 +120,7 @@ class _FloatingNavBarState extends State<FloatingNavBar> {
                 ),
               ),
               const SizedBox(width: 12),
-              
+
               // Register (filled button)
               ElevatedButton(
                 onPressed: widget.onRegisterPressed,
@@ -176,7 +173,7 @@ class _FloatingNavBarState extends State<FloatingNavBar> {
             onTap: () => widget.onTabSelected('home'),
             child: const LogoWidget(size: 28),
           ),
-          
+
           // Compact menu
           PopupMenuButton<String>(
             onSelected: (value) {
@@ -219,11 +216,7 @@ class _FloatingNavBarState extends State<FloatingNavBar> {
                 ),
               ];
             },
-            child: const Icon(
-              Icons.menu,
-              color: Color(0xFF4C63FF),
-              size: 24,
-            ),
+            child: const Icon(Icons.menu, color: Color(0xFF4C63FF), size: 24),
           ),
         ],
       ),

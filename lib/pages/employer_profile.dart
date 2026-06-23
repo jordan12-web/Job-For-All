@@ -23,16 +23,16 @@ class _EmployerProfileState extends State<EmployerProfile>
   late final TabController _tabController;
 
   final TextEditingController _companyNameController = TextEditingController();
-  final TextEditingController _contactController       = TextEditingController();
-  final TextEditingController _regNumberController     = TextEditingController();
+  final TextEditingController _contactController = TextEditingController();
+  final TextEditingController _regNumberController = TextEditingController();
 
   final FocusNode _companyFocus = FocusNode();
   final FocusNode _contactFocus = FocusNode();
-  final FocusNode _regFocus     = FocusNode();
+  final FocusNode _regFocus = FocusNode();
 
   model.EmployerProfile? _profile;
-  bool _isLoading  = true;
-  bool _isSaving   = false;
+  bool _isLoading = true;
+  bool _isSaving = false;
   String? _loadError;
 
   @override
@@ -61,8 +61,8 @@ class _EmployerProfileState extends State<EmployerProfile>
     });
 
     try {
-      final model.EmployerProfile? profile =
-          await EmployerService.instance.fetchMyProfile();
+      final model.EmployerProfile? profile = await EmployerService.instance
+          .fetchMyProfile();
 
       if (!mounted) {
         return;
@@ -73,9 +73,8 @@ class _EmployerProfileState extends State<EmployerProfile>
         _isLoading = false;
         if (profile != null) {
           _companyNameController.text = profile.companyName;
-          _contactController.text     = profile.contactInfo;
-          _regNumberController.text   =
-              profile.businessRegistrationNumber ?? '';
+          _contactController.text = profile.contactInfo;
+          _regNumberController.text = profile.businessRegistrationNumber ?? '';
         }
       });
     } catch (e) {
@@ -102,8 +101,8 @@ class _EmployerProfileState extends State<EmployerProfile>
 
   Future<void> _saveProfile() async {
     final String companyName = _companyNameController.text.trim();
-    final String contact     = _contactController.text.trim();
-    final String regNumber   = _regNumberController.text.trim();
+    final String contact = _contactController.text.trim();
+    final String regNumber = _regNumberController.text.trim();
 
     if (companyName.isEmpty || contact.isEmpty) {
       _showMessage('Company name and contact are required.', isError: true);
@@ -113,19 +112,19 @@ class _EmployerProfileState extends State<EmployerProfile>
     setState(() => _isSaving = true);
 
     try {
-      final model.EmployerProfile updated =
-          await EmployerService.instance.updateProfile(
-        companyName: companyName,
-        contactInfo: contact,
-        businessRegistrationNumber: regNumber,
-      );
+      final model.EmployerProfile updated = await EmployerService.instance
+          .updateProfile(
+            companyName: companyName,
+            contactInfo: contact,
+            businessRegistrationNumber: regNumber,
+          );
 
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _profile  = updated;
+        _profile = updated;
         _isSaving = false;
       });
 
@@ -135,7 +134,7 @@ class _EmployerProfileState extends State<EmployerProfile>
         regNumber.isEmpty
             ? 'Profile saved.'
             : 'Profile saved. Your registration number is now pending '
-              'admin verification.',
+                  'admin verification.',
       );
     } catch (e) {
       DebugLogger.error('saveProfile failed: $e');
@@ -143,10 +142,7 @@ class _EmployerProfileState extends State<EmployerProfile>
         return;
       }
       setState(() => _isSaving = false);
-      _showMessage(
-        e.toString().replaceFirst('Exception: ', ''),
-        isError: true,
-      );
+      _showMessage(e.toString().replaceFirst('Exception: ', ''), isError: true);
     }
   }
 
@@ -162,21 +158,21 @@ class _EmployerProfileState extends State<EmployerProfile>
           indicatorColor: AppColors.tertiary,
           tabs: const <Widget>[
             Tab(text: 'Profile', icon: Icon(Icons.business_outlined)),
-            Tab(text: 'Subscription', icon: Icon(Icons.workspace_premium_outlined)),
+            Tab(
+              text: 'Subscription',
+              icon: Icon(Icons.workspace_premium_outlined),
+            ),
           ],
         ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _loadError != null
-              ? _buildErrorState()
-              : TabBarView(
-                  controller: _tabController,
-                  children: <Widget>[
-                    _buildProfileTab(),
-                    _buildSubscriptionTab(),
-                  ],
-                ),
+          ? _buildErrorState()
+          : TabBarView(
+              controller: _tabController,
+              children: <Widget>[_buildProfileTab(), _buildSubscriptionTab()],
+            ),
     );
   }
 
@@ -383,9 +379,9 @@ class _EmployerProfileState extends State<EmployerProfile>
               Text(
                 'No Active Subscription',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
-                    ),
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
@@ -404,10 +400,8 @@ class _EmployerProfileState extends State<EmployerProfile>
               CommonButton(
                 label: 'Post a Job to Choose a Plan',
                 icon: Icons.add_circle_outline,
-                onPressed: () => Navigator.pushNamed(
-                  context,
-                  JobPostingPage.routeName,
-                ),
+                onPressed: () =>
+                    Navigator.pushNamed(context, JobPostingPage.routeName),
               ),
               const SizedBox(height: 8),
               Text(
@@ -429,8 +423,7 @@ class _EmployerProfileState extends State<EmployerProfile>
 
     // Placeholder billing date — real billing cycle tracking is a
     // future sprint once recurring payments are wired to a real gateway.
-    final DateTime nextBilling =
-        DateTime.now().add(const Duration(days: 30));
+    final DateTime nextBilling = DateTime.now().add(const Duration(days: 30));
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -458,9 +451,7 @@ class _EmployerProfileState extends State<EmployerProfile>
                           children: <Widget>[
                             Text(
                               plan?.name ?? profile.subscriptionPlan,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
+                              style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(fontWeight: FontWeight.w800),
                             ),
                             Text(
@@ -483,7 +474,8 @@ class _EmployerProfileState extends State<EmployerProfile>
                   if (plan != null)
                     _SubscriptionDetailRow(
                       label: 'Price',
-                      value: 'ETB ${plan.priceETB.toStringAsFixed(0)} / ${plan.duration}',
+                      value:
+                          'ETB ${plan.priceETB.toStringAsFixed(0)} / ${plan.duration}',
                     ),
                   _SubscriptionDetailRow(
                     label: 'Next Billing Date',
@@ -492,10 +484,8 @@ class _EmployerProfileState extends State<EmployerProfile>
                   ),
                   const SizedBox(height: 24),
                   OutlinedButton.icon(
-                    onPressed: () => Navigator.pushNamed(
-                      context,
-                      JobPostingPage.routeName,
-                    ),
+                    onPressed: () =>
+                        Navigator.pushNamed(context, JobPostingPage.routeName),
                     icon: const Icon(Icons.add),
                     label: const Text('Post Another Job'),
                   ),
@@ -531,10 +521,9 @@ class _ProfileSection extends StatelessWidget {
         children: <Widget>[
           Text(
             title,
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.w700),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
           ...children,

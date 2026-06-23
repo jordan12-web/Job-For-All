@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 /// Simple debug logger that only outputs in debug mode.
-/// 
+///
 /// In production (kReleaseMode), all logs are silent.
 /// In development (kDebugMode), logs appear in console with emojis.
 abstract final class DebugLogger {

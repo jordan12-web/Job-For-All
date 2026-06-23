@@ -22,10 +22,10 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController _emailController    = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  final FocusNode _emailFocus    = FocusNode();
+  final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
 
   String? _emailError;
@@ -120,7 +120,9 @@ class _LoginPageState extends State<LoginPage> {
 
     debugPrint('🔐 LoginPage: Login successful');
     if (profile != null) {
-      debugPrint('🔐 LoginPage: Profile - id=${profile.id}, email=${profile.email}, role=${profile.role}');
+      debugPrint(
+        '🔐 LoginPage: Profile - id=${profile.id}, email=${profile.email}, role=${profile.role}',
+      );
     }
     if (routeName != null) {
       debugPrint('🔐 LoginPage: Routing to $routeName');

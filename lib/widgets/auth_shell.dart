@@ -64,15 +64,14 @@ class AuthShell extends StatelessWidget {
                           ),
                         Text(
                           title,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
+                          style: Theme.of(context).textTheme.headlineSmall
                               ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           subtitle,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
                                 color: AppColors.textSecondary,
                                 height: 1.5,
                               ),
@@ -152,11 +151,20 @@ class _BrandPanel extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  _Highlight(icon: Icons.verified_user_outlined, text: 'Verified profiles'),
+                  _Highlight(
+                    icon: Icons.verified_user_outlined,
+                    text: 'Verified profiles',
+                  ),
                   const SizedBox(height: 12),
-                  _Highlight(icon: Icons.dialpad_outlined, text: 'USSD job access'),
+                  _Highlight(
+                    icon: Icons.dialpad_outlined,
+                    text: 'USSD job access',
+                  ),
                   const SizedBox(height: 12),
-                  _Highlight(icon: Icons.security_outlined, text: 'Secure local payments'),
+                  _Highlight(
+                    icon: Icons.security_outlined,
+                    text: 'Secure local payments',
+                  ),
                   const Spacer(),
                 ],
               ),

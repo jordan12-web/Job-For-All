@@ -31,10 +31,7 @@ class StaticPageShell extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: <Color>[
-                    AppColors.indigoDarker,
-                    AppColors.indigo,
-                  ],
+                  colors: <Color>[AppColors.indigoDarker, AppColors.indigo],
                 ),
               ),
               child: SafeArea(
@@ -53,7 +50,10 @@ class StaticPageShell extends StatelessWidget {
                         children: <Widget>[
                           IconButton(
                             onPressed: () => Navigator.of(context).pop(),
-                            icon: const Icon(Icons.arrow_back, color: Colors.white),
+                            icon: const Icon(
+                              Icons.arrow_back,
+                              color: Colors.white,
+                            ),
                           ),
                           const LogoWidget(size: 32, color: Colors.white),
                           const SizedBox(width: 12),
@@ -70,7 +70,8 @@ class StaticPageShell extends StatelessWidget {
                       const SizedBox(height: 24),
                       Text(
                         title,
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.w800,
                             ),
@@ -105,9 +106,9 @@ class StaticPageShell extends StatelessWidget {
                       child: Text(
                         body,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              height: 1.75,
-                              color: AppColors.textSecondary,
-                            ),
+                          height: 1.75,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ),
                   ),

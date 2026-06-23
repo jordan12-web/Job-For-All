@@ -94,7 +94,8 @@ class _JobListingPageState extends State<JobListingPage> {
     return _allJobs.where((Job job) {
       final String keyword = _searchKeyword.toLowerCase();
 
-      final bool matchesKeyword = keyword.isEmpty ||
+      final bool matchesKeyword =
+          keyword.isEmpty ||
           job.title.toLowerCase().contains(keyword) ||
           (job.company ?? '').toLowerCase().contains(keyword) ||
           job.description.toLowerCase().contains(keyword);
@@ -113,9 +114,7 @@ class _JobListingPageState extends State<JobListingPage> {
   void _openJobDetails(Job job) {
     Navigator.push(
       context,
-      MaterialPageRoute<void>(
-        builder: (_) => JobDetailPage(job: job),
-      ),
+      MaterialPageRoute<void>(builder: (_) => JobDetailPage(job: job)),
     );
   }
 
@@ -147,10 +146,7 @@ class _JobListingPageState extends State<JobListingPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Job Listings'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Job Listings'), elevation: 0),
       body: body,
     );
   }
@@ -222,15 +218,15 @@ class _JobListingPageState extends State<JobListingPage> {
               Text(
                 'Browse Opportunities',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
                 'Search verified listings from employers across Ethiopia.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
               ),
               const SizedBox(height: 24),
               JobSearchBar(
@@ -313,27 +309,25 @@ class _JobListingPageState extends State<JobListingPage> {
                   ),
                 )
               else
-                ...jobs.map(
-                  (Job job) {
-                    // Convert once for widgets that use the display-map contract
-                    final Map<String, String> displayMap = job.toDisplayMap();
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: JobCard(
-                        job: displayMap,
-                        companyLogo: MockCompanyLogo.forCompany(
-                          job.company ?? 'Company',
-                        ),
-                        onTap: () => _openJobDetails(job),
-                        onApply: () => _openApplyDialog(job),
-                        isMatched: MatchingUtils.isJobMatch(
-                          seekerSkills: seekerSkills,
-                          job: displayMap,
-                        ),
+                ...jobs.map((Job job) {
+                  // Convert once for widgets that use the display-map contract
+                  final Map<String, String> displayMap = job.toDisplayMap();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: JobCard(
+                      job: displayMap,
+                      companyLogo: MockCompanyLogo.forCompany(
+                        job.company ?? 'Company',
                       ),
-                    );
-                  },
-                ),
+                      onTap: () => _openJobDetails(job),
+                      onApply: () => _openApplyDialog(job),
+                      isMatched: MatchingUtils.isJobMatch(
+                        seekerSkills: seekerSkills,
+                        job: displayMap,
+                      ),
+                    ),
+                  );
+                }),
             ],
           ),
         ),
@@ -514,10 +508,7 @@ class _ApplyJobDialogState extends State<_ApplyJobDialog> {
                         widget.job.title,
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
-                      Text(
-                        company,
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
+                      Text(company, style: TextStyle(color: Colors.grey[600])),
                     ],
                   ),
                 ),

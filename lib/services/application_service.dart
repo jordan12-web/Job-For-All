@@ -4,12 +4,7 @@ import '../models/application.dart';
 import '../utils/debug_logger.dart';
 
 /// Result wrapper returned by [ApplicationService.apply].
-enum ApplyStatus {
-  success,
-  alreadyApplied,
-  notLoggedIn,
-  error,
-}
+enum ApplyStatus { success, alreadyApplied, notLoggedIn, error }
 
 class ApplyResult {
   const ApplyResult({required this.status, this.message});
@@ -34,10 +29,7 @@ class ApplicationService {
 
   /// Submits a job application for the currently logged-in seeker.
   /// Handles the UNIQUE(job_id, seeker_id) constraint gracefully.
-  Future<ApplyResult> apply({
-    required String jobId,
-    String? cvUrl,
-  }) async {
+  Future<ApplyResult> apply({required String jobId, String? cvUrl}) async {
     final String? seekerId = _client.auth.currentSession?.user.id;
 
     if (seekerId == null || seekerId.isEmpty) {
@@ -54,9 +46,9 @@ class ApplicationService {
 
     try {
       await _client.from(_table).insert(<String, dynamic>{
-        'job_id':    jobId,
+        'job_id': jobId,
         'seeker_id': seekerId,
-        'status':    'pending',
+        'status': 'pending',
         if (cvUrl != null && cvUrl.isNotEmpty) 'cv_url': cvUrl,
       });
 
@@ -121,8 +113,9 @@ class ApplicationService {
           .order('created_at', ascending: false);
 
       return data
-          .map((dynamic item) =>
-              Application.fromMap(item as Map<String, dynamic>))
+          .map(
+            (dynamic item) => Application.fromMap(item as Map<String, dynamic>),
+          )
           .toList();
     } on PostgrestException catch (e) {
       DebugLogger.error('fetchMyApplications failed: ${e.message}');
@@ -147,9 +140,7 @@ class ApplicationService {
       return <Application>[];
     }
 
-    DebugLogger.step(
-      'fetchApplicationsForEmployer: employerId=$employerId',
-    );
+    DebugLogger.step('fetchApplicationsForEmployer: employerId=$employerId');
 
     try {
       // jobs!inner enforces employer filter; users!seeker_id disambiguates
@@ -166,8 +157,9 @@ class ApplicationService {
       DebugLogger.info('fetchApplicationsForEmployer: ${data.length} rows');
 
       return data
-          .map((dynamic item) =>
-              Application.fromMap(item as Map<String, dynamic>))
+          .map(
+            (dynamic item) => Application.fromMap(item as Map<String, dynamic>),
+          )
           .toList();
     } on PostgrestException catch (e) {
       DebugLogger.error(
@@ -208,8 +200,9 @@ class ApplicationService {
           .order('created_at', ascending: false);
 
       return data
-          .map((dynamic item) =>
-              Application.fromMap(item as Map<String, dynamic>))
+          .map(
+            (dynamic item) => Application.fromMap(item as Map<String, dynamic>),
+          )
           .toList();
     } on PostgrestException catch (e) {
       DebugLogger.error('fetchApplicationsForJob failed: ${e.message}');
@@ -239,9 +232,7 @@ class ApplicationService {
   /// Returns applicant counts for multiple jobs in one round trip.
   /// More efficient than calling [countApplicationsForJob] in a loop
   /// when rendering a full "My Postings" list.
-  Future<Map<String, int>> countApplicationsForJobs(
-    List<String> jobIds,
-  ) async {
+  Future<Map<String, int>> countApplicationsForJobs(List<String> jobIds) async {
     if (jobIds.isEmpty) {
       return <String, int>{};
     }
@@ -274,9 +265,7 @@ class ApplicationService {
     required String status,
   }) async {
     if (!<String>{'accepted', 'rejected'}.contains(status)) {
-      DebugLogger.error(
-        'updateApplicationStatus: invalid status "$status"',
-      );
+      DebugLogger.error('updateApplicationStatus: invalid status "$status"');
       return false;
     }
 
@@ -290,9 +279,7 @@ class ApplicationService {
           .update(<String, dynamic>{'status': status})
           .eq('id', applicationId);
 
-      DebugLogger.success(
-        'Application $applicationId updated to "$status"',
-      );
+      DebugLogger.success('Application $applicationId updated to "$status"');
       return true;
     } on PostgrestException catch (e) {
       DebugLogger.error(

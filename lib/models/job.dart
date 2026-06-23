@@ -39,8 +39,8 @@ class Job {
       createdAt: map['created_at'] is String
           ? DateTime.parse(map['created_at'] as String)
           : map['created_at'] is DateTime
-              ? map['created_at'] as DateTime
-              : DateTime.now(),
+          ? map['created_at'] as DateTime
+          : DateTime.now(),
     );
   }
 

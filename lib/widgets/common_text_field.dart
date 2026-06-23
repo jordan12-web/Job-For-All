@@ -91,19 +91,19 @@ class CommonTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextField(
-      controller:       controller,
-      focusNode:        focusNode,
-      enabled:          enabled,
-      keyboardType:     _resolvedKeyboardType,
-      obscureText:      obscureText,
-      maxLines:         obscureText ? 1 : maxLines,
-      textInputAction:  _textInputAction,
-      autofillHints:    autofillHints,
-      inputFormatters:  inputFormatters,
-      onSubmitted:      _handleSubmitted,
+      controller: controller,
+      focusNode: focusNode,
+      enabled: enabled,
+      keyboardType: _resolvedKeyboardType,
+      obscureText: obscureText,
+      maxLines: obscureText ? 1 : maxLines,
+      textInputAction: _textInputAction,
+      autofillHints: autofillHints,
+      inputFormatters: inputFormatters,
+      onSubmitted: _handleSubmitted,
       decoration: InputDecoration(
         labelText: labelText,
-        hintText:  hintText,
+        hintText: hintText,
         enabledBorder: hasError
             ? OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),

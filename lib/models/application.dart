@@ -32,20 +32,20 @@ class Application {
 
   factory Application.fromMap(Map<String, dynamic> map) {
     // Supabase returns nested joins as maps under the table name key
-    final dynamic jobsJoin  = map['jobs'];
+    final dynamic jobsJoin = map['jobs'];
     final dynamic usersJoin = map['users'];
 
     return Application(
-      id:          map['id']         as String,
-      jobId:       map['job_id']     as String,
-      seekerId:    map['seeker_id']  as String,
-      status:      map['status']     as String? ?? 'pending',
-      cvUrl:       map['cv_url']     as String?,
-      createdAt:   map['created_at'] is String
+      id: map['id'] as String,
+      jobId: map['job_id'] as String,
+      seekerId: map['seeker_id'] as String,
+      status: map['status'] as String? ?? 'pending',
+      cvUrl: map['cv_url'] as String?,
+      createdAt: map['created_at'] is String
           ? DateTime.parse(map['created_at'] as String)
           : DateTime.now(),
-      jobTitle:    jobsJoin  is Map ? jobsJoin['title']  as String? : null,
-      seekerName:  usersJoin is Map ? usersJoin['name']  as String? : null,
+      jobTitle: jobsJoin is Map ? jobsJoin['title'] as String? : null,
+      seekerName: usersJoin is Map ? usersJoin['name'] as String? : null,
       seekerEmail: usersJoin is Map ? usersJoin['email'] as String? : null,
     );
   }
@@ -53,19 +53,19 @@ class Application {
   /// Returns a copy with updated fields — used for optimistic UI updates.
   Application copyWith({String? status}) {
     return Application(
-      id:          id,
-      jobId:       jobId,
-      seekerId:    seekerId,
-      status:      status ?? this.status,
-      createdAt:   createdAt,
-      cvUrl:       cvUrl,
-      jobTitle:    jobTitle,
-      seekerName:  seekerName,
+      id: id,
+      jobId: jobId,
+      seekerId: seekerId,
+      status: status ?? this.status,
+      createdAt: createdAt,
+      cvUrl: cvUrl,
+      jobTitle: jobTitle,
+      seekerName: seekerName,
       seekerEmail: seekerEmail,
     );
   }
 
-  bool get isPending  => status == 'pending';
+  bool get isPending => status == 'pending';
   bool get isAccepted => status == 'accepted';
   bool get isRejected => status == 'rejected';
 }
