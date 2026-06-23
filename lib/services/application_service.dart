@@ -152,13 +152,14 @@ class ApplicationService {
     );
 
     try {
-      // Select application columns + join jobs (filter + title) + join users
-      // Use jobs!inner to enforce the employer_id filter at the DB level.
-      // The join syntax jobs!applications_job_id_fkey ensures PostgREST
-      // uses the correct FK path when multiple FKs exist.
+      // jobs!inner enforces employer filter; users!seeker_id disambiguates
+      // the FK when multiple relationships point at public.users.
       final List<dynamic> data = await _client
           .from(_table)
-          .select('*, jobs!inner(id, title, employer_id), users(name, email)')
+          .select(
+            '*, jobs!inner(id, title, employer_id), '
+            'users!seeker_id(name, email)',
+          )
           .eq('jobs.employer_id', employerId)
           .order('created_at', ascending: false);
 
@@ -176,6 +177,43 @@ class ApplicationService {
     } catch (e) {
       DebugLogger.error('fetchApplicationsForEmployer unexpected error: $e');
       throw Exception('Failed to fetch applications: $e');
+    }
+  }
+
+  /// Fetches applications for a single [jobId], scoped to [employerId].
+  ///
+  /// Verifies the job belongs to the employer at the database level via
+  /// the inner join on jobs.employer_id.
+  Future<List<Application>> fetchApplicationsForJob({
+    required String jobId,
+    required String employerId,
+  }) async {
+    if (jobId.isEmpty || employerId.isEmpty) {
+      return <Application>[];
+    }
+
+    DebugLogger.step(
+      'fetchApplicationsForJob: jobId=$jobId employerId=$employerId',
+    );
+
+    try {
+      final List<dynamic> data = await _client
+          .from(_table)
+          .select(
+            '*, jobs!inner(id, title, employer_id), '
+            'users!seeker_id(name, email)',
+          )
+          .eq('job_id', jobId)
+          .eq('jobs.employer_id', employerId)
+          .order('created_at', ascending: false);
+
+      return data
+          .map((dynamic item) =>
+              Application.fromMap(item as Map<String, dynamic>))
+          .toList();
+    } on PostgrestException catch (e) {
+      DebugLogger.error('fetchApplicationsForJob failed: ${e.message}');
+      throw Exception('Failed to fetch applications: ${e.message}');
     }
   }
 

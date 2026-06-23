@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/application.dart';
 import '../services/application_service.dart';
+import '../services/notification_service.dart';
 import '../utils/debug_logger.dart';
 import '../utils/role_utils.dart';
 
@@ -24,6 +25,7 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
   // Tracks which application IDs are currently being updated
   // so we can show a spinner on just that card's buttons
   final Set<String> _updatingIds = <String>{};
+  final Set<String> _shortlistingIds = <String>{};
 
   @override
   void initState() {
@@ -124,6 +126,38 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
         backgroundColor: success
             ? (newStatus == 'accepted' ? Colors.green[700] : Colors.red[700])
             : Colors.grey[800],
+      ),
+    );
+  }
+
+  Future<void> _scheduleInterview(Application application) async {
+    if (_shortlistingIds.contains(application.id)) {
+      return;
+    }
+
+    setState(() => _shortlistingIds.add(application.id));
+
+    final bool success =
+        await NotificationService.instance.scheduleInterview(
+      seekerId: application.seekerId,
+      applicationId: application.id,
+      jobTitle: application.jobTitle ?? 'your application',
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => _shortlistingIds.remove(application.id));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'Interview notification sent to ${application.seekerName ?? 'applicant'}.'
+              : 'Could not send notification. Please try again.',
+        ),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -253,12 +287,14 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
                   child: _ApplicantCard(
                     application: app,
                     isUpdating: _updatingIds.contains(app.id),
+                    isShortlisting: _shortlistingIds.contains(app.id),
                     onAccept: app.isPending
                         ? () => _updateStatus(app, 'accepted')
                         : null,
                     onReject: app.isPending
                         ? () => _updateStatus(app, 'rejected')
                         : null,
+                    onShortlist: () => _scheduleInterview(app),
                   ),
                 ),
               ),
@@ -274,14 +310,18 @@ class _ApplicantCard extends StatelessWidget {
   const _ApplicantCard({
     required this.application,
     required this.isUpdating,
+    this.isShortlisting = false,
     this.onAccept,
     this.onReject,
+    this.onShortlist,
   });
 
   final Application application;
   final bool isUpdating;
+  final bool isShortlisting;
   final VoidCallback? onAccept;
   final VoidCallback? onReject;
+  final VoidCallback? onShortlist;
 
   Color _statusColor() {
     return switch (application.status) {
@@ -389,8 +429,10 @@ class _ApplicantCard extends StatelessWidget {
                 ),
               )
             else if (application.isPending)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 12,
+                runSpacing: 8,
                 children: <Widget>[
                   OutlinedButton.icon(
                     onPressed: onReject,
@@ -401,7 +443,19 @@ class _ApplicantCard extends StatelessWidget {
                       side: BorderSide(color: Colors.red[300]!),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  OutlinedButton.icon(
+                    onPressed: isShortlisting ? null : onShortlist,
+                    icon: isShortlisting
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.event_outlined, size: 18),
+                    label: Text(
+                      isShortlisting ? 'Sending…' : 'Shortlist / Schedule',
+                    ),
+                  ),
                   FilledButton.icon(
                     onPressed: onAccept,
                     icon: const Icon(Icons.check, size: 18),

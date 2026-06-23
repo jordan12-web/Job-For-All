@@ -4,6 +4,7 @@ import '../data/mock_job_store.dart';
 import '../models/pricing_plan.dart';
 import '../services/job_service.dart';
 import '../utils/debug_logger.dart';
+import '../theme/app_theme.dart';
 import '../widgets/common_button.dart';
 import '../widgets/common_text_field.dart';
 import '../widgets/filter_dropdown.dart';
@@ -28,6 +29,12 @@ class _JobPostingPageState extends State<JobPostingPage> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _requirementsController = TextEditingController();
 
+  final FocusNode _titleFocus        = FocusNode();
+  final FocusNode _companyFocus      = FocusNode();
+  final FocusNode _locationFocus     = FocusNode();
+  final FocusNode _descriptionFocus  = FocusNode();
+  final FocusNode _requirementsFocus = FocusNode();
+
   String _selectedJobType = MockJobStore.jobTypes.first;
   bool _isSubmitting = false;
 
@@ -38,6 +45,11 @@ class _JobPostingPageState extends State<JobPostingPage> {
     _locationController.dispose();
     _descriptionController.dispose();
     _requirementsController.dispose();
+    _titleFocus.dispose();
+    _companyFocus.dispose();
+    _locationFocus.dispose();
+    _descriptionFocus.dispose();
+    _requirementsFocus.dispose();
     super.dispose();
   }
 
@@ -148,16 +160,19 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final double pad = AppTheme.layoutOf(context).pagePadding;
+    final double gap = AppTheme.layoutOf(context).fieldSpacing;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Post a Job')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(pad),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 720),
             child: Card(
               child: Padding(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(pad),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
@@ -168,27 +183,33 @@ class _JobPostingPageState extends State<JobPostingPage> {
                                 fontWeight: FontWeight.w700,
                               ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Text(
                       'Your listing will be reviewed before it goes live.',
                       style: TextStyle(color: Colors.grey[600]),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: gap + 4),
                     CommonTextField(
                       controller: _titleController,
                       labelText: 'Job Title *',
+                      focusNode: _titleFocus,
+                      nextFocusNode: _companyFocus,
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: gap),
                     CommonTextField(
                       controller: _companyController,
                       labelText: 'Company *',
+                      focusNode: _companyFocus,
+                      nextFocusNode: _locationFocus,
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: gap),
                     CommonTextField(
                       controller: _locationController,
                       labelText: 'Location *',
+                      focusNode: _locationFocus,
+                      nextFocusNode: _descriptionFocus,
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: gap),
                     FilterDropdown(
                       labelText: 'Job Type',
                       value: _selectedJobType,
@@ -200,19 +221,23 @@ class _JobPostingPageState extends State<JobPostingPage> {
                         setState(() => _selectedJobType = value);
                       },
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: gap),
                     CommonTextField(
                       controller: _descriptionController,
                       labelText: 'Description *',
                       maxLines: 4,
+                      focusNode: _descriptionFocus,
+                      nextFocusNode: _requirementsFocus,
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: gap),
                     CommonTextField(
                       controller: _requirementsController,
                       labelText: 'Requirements *',
                       maxLines: 4,
+                      focusNode: _requirementsFocus,
+                      onSubmitted: _submitJob,
                     ),
-                    const SizedBox(height: 28),
+                    SizedBox(height: gap + 8),
                     // ── Submit button ──────────────────────────────────────
                     // Uses CommonButton to keep styling consistent with the
                     // rest of the app — no style changes per sprint rules.

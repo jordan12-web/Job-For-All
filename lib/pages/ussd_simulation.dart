@@ -17,6 +17,7 @@ class UssdSimulationPage extends StatefulWidget {
 
 class _UssdSimulationPageState extends State<UssdSimulationPage> {
   final TextEditingController _shortCodeController = TextEditingController();
+  final FocusNode _shortCodeFocus = FocusNode();
   final List<String> _selectionLog = <String>[];
 
   bool _menuVisible = false;
@@ -25,6 +26,7 @@ class _UssdSimulationPageState extends State<UssdSimulationPage> {
   @override
   void dispose() {
     _shortCodeController.dispose();
+    _shortCodeFocus.dispose();
     super.dispose();
   }
 
@@ -89,6 +91,8 @@ class _UssdSimulationPageState extends State<UssdSimulationPage> {
                         controller: _shortCodeController,
                         labelText: 'Short Code',
                         hasError: _shortCodeError != null,
+                        focusNode: _shortCodeFocus,
+                        onSubmitted: _startSession,
                       ),
                       if (_shortCodeError != null) ...<Widget>[
                         const SizedBox(height: 8),

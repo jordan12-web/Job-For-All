@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../utils/role_utils.dart';
+import 'hoverable_card.dart';
 
 /// Displays a single job listing using the "Clinical" design system.
 ///
@@ -45,10 +46,11 @@ class JobCard extends StatelessWidget {
     final String description = job['description'] ?? '';
     final String postedDate = job['createdAt'] ?? job['date'] ?? '';
 
-    return _ClinicalHoverCard(
+    return HoverableCard(
       onTap: onTap,
+      padding: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(24), // Clinical card token: 24px
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -175,66 +177,11 @@ class _MetaTag extends StatelessWidget {
       child: Text(
         label,
         style: const TextStyle(
-          fontFamily: 'IBM Plex Mono',
           fontSize: 11,
           fontWeight: FontWeight.w600,
           color: AppColors.secondary,
           letterSpacing: 0.3,
         ),
-      ),
-    );
-  }
-}
-
-/// Clinical hover card — elevation shift ONLY.
-/// No border colour change, no accent flash, no scale jump.
-/// This is a deliberate constraint from the design system: hover
-/// must read as "this is interactive" without drawing attention
-/// away from the single accent action inside the card.
-class _ClinicalHoverCard extends StatefulWidget {
-  const _ClinicalHoverCard({required this.child, required this.onTap});
-
-  final Widget child;
-  final VoidCallback onTap;
-
-  @override
-  State<_ClinicalHoverCard> createState() => _ClinicalHoverCardState();
-}
-
-class _ClinicalHoverCardState extends State<_ClinicalHoverCard> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      curve: Curves.easeOut,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceWhite,
-        borderRadius: BorderRadius.circular(12), // Clinical card token: 12px
-        border: Border.all(color: AppColors.border),
-        boxShadow: _hovered
-            ? <BoxShadow>[
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.10),
-                  blurRadius: 20,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 8),
-                ),
-              ]
-            : <BoxShadow>[
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.03),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-      ),
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(onTap: widget.onTap, child: widget.child),
       ),
     );
   }

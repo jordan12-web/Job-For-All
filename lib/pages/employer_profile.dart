@@ -26,6 +26,10 @@ class _EmployerProfileState extends State<EmployerProfile>
   final TextEditingController _contactController       = TextEditingController();
   final TextEditingController _regNumberController     = TextEditingController();
 
+  final FocusNode _companyFocus = FocusNode();
+  final FocusNode _contactFocus = FocusNode();
+  final FocusNode _regFocus     = FocusNode();
+
   model.EmployerProfile? _profile;
   bool _isLoading  = true;
   bool _isSaving   = false;
@@ -44,6 +48,9 @@ class _EmployerProfileState extends State<EmployerProfile>
     _companyNameController.dispose();
     _contactController.dispose();
     _regNumberController.dispose();
+    _companyFocus.dispose();
+    _contactFocus.dispose();
+    _regFocus.dispose();
     super.dispose();
   }
 
@@ -222,6 +229,8 @@ class _EmployerProfileState extends State<EmployerProfile>
                       controller: _companyNameController,
                       labelText: 'Company Name',
                       enabled: !_isSaving,
+                      focusNode: _companyFocus,
+                      nextFocusNode: _contactFocus,
                     ),
                     const SizedBox(height: 16),
                     CommonTextField(
@@ -229,6 +238,8 @@ class _EmployerProfileState extends State<EmployerProfile>
                       labelText: 'Contact',
                       keyboardType: TextInputType.phone,
                       enabled: !_isSaving,
+                      focusNode: _contactFocus,
+                      nextFocusNode: _regFocus,
                     ),
                     const SizedBox(height: 16),
                     CommonTextField(
@@ -236,6 +247,8 @@ class _EmployerProfileState extends State<EmployerProfile>
                       labelText: 'Business Registration Number',
                       hintText: 'e.g. ETB-REG-00123',
                       enabled: !_isSaving,
+                      focusNode: _regFocus,
+                      onSubmitted: _saveProfile,
                     ),
                     const SizedBox(height: 8),
                     Text(

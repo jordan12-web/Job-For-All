@@ -5,6 +5,7 @@ import '../models/job.dart';
 import '../services/application_service.dart';
 import '../services/job_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_theme.dart';
 import '../utils/debug_logger.dart';
 import '../utils/role_utils.dart';
 import '../widgets/common_button.dart';
@@ -110,6 +111,12 @@ class _CreateJobTabState extends State<_CreateJobTab> {
   final TextEditingController _descriptionController  = TextEditingController();
   final TextEditingController _requirementsController = TextEditingController();
 
+  final FocusNode _titleFocus        = FocusNode();
+  final FocusNode _companyFocus      = FocusNode();
+  final FocusNode _locationFocus     = FocusNode();
+  final FocusNode _descriptionFocus  = FocusNode();
+  final FocusNode _requirementsFocus = FocusNode();
+
   String _selectedJobType = MockJobStore.jobTypes.first;
   bool _isSubmitting = false;
   bool _isSavingDraft = false;
@@ -121,6 +128,11 @@ class _CreateJobTabState extends State<_CreateJobTab> {
     _locationController.dispose();
     _descriptionController.dispose();
     _requirementsController.dispose();
+    _titleFocus.dispose();
+    _companyFocus.dispose();
+    _locationFocus.dispose();
+    _descriptionFocus.dispose();
+    _requirementsFocus.dispose();
     super.dispose();
   }
 
@@ -240,15 +252,17 @@ class _CreateJobTabState extends State<_CreateJobTab> {
   @override
   Widget build(BuildContext context) {
     final bool anyBusy = _isSubmitting || _isSavingDraft;
+    final double pad = AppTheme.layoutOf(context).pagePadding;
+    final double gap = AppTheme.layoutOf(context).fieldSpacing;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(pad),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720),
           child: Card(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(pad),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
@@ -258,30 +272,36 @@ class _CreateJobTabState extends State<_CreateJobTab> {
                           fontWeight: FontWeight.w700,
                         ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
                     'Save a draft to finish later, or submit for admin review.',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: gap + 4),
                   CommonTextField(
                     controller: _titleController,
                     labelText: 'Job Title *',
                     enabled: !anyBusy,
+                    focusNode: _titleFocus,
+                    nextFocusNode: _companyFocus,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: gap),
                   CommonTextField(
                     controller: _companyController,
                     labelText: 'Company *',
                     enabled: !anyBusy,
+                    focusNode: _companyFocus,
+                    nextFocusNode: _locationFocus,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: gap),
                   CommonTextField(
                     controller: _locationController,
                     labelText: 'Location *',
                     enabled: !anyBusy,
+                    focusNode: _locationFocus,
+                    nextFocusNode: _descriptionFocus,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: gap),
                   FilterDropdown(
                     labelText: 'Job Type',
                     value: _selectedJobType,
@@ -293,21 +313,25 @@ class _CreateJobTabState extends State<_CreateJobTab> {
                       setState(() => _selectedJobType = value);
                     },
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: gap),
                   CommonTextField(
                     controller: _descriptionController,
                     labelText: 'Description *',
                     maxLines: 4,
                     enabled: !anyBusy,
+                    focusNode: _descriptionFocus,
+                    nextFocusNode: _requirementsFocus,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: gap),
                   CommonTextField(
                     controller: _requirementsController,
                     labelText: 'Requirements *',
                     maxLines: 4,
                     enabled: !anyBusy,
+                    focusNode: _requirementsFocus,
+                    onSubmitted: () => _submit(asDraft: false),
                   ),
-                  const SizedBox(height: 28),
+                  SizedBox(height: gap + 8),
                   Row(
                     children: <Widget>[
                       Expanded(

@@ -26,6 +26,12 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
   final TextEditingController _educationController = TextEditingController();
   final TextEditingController _documentController = TextEditingController();
 
+  final FocusNode _nameFocus     = FocusNode();
+  final FocusNode _contactFocus  = FocusNode();
+  final FocusNode _skillsFocus   = FocusNode();
+  final FocusNode _educationFocus = FocusNode();
+  final FocusNode _documentFocus = FocusNode();
+
   Map<String, String> _savedProfile = Map<String, String>.from(
     MockProfileStore.jobSeekerProfile,
   );
@@ -43,6 +49,11 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
     _skillsController.dispose();
     _educationController.dispose();
     _documentController.dispose();
+    _nameFocus.dispose();
+    _contactFocus.dispose();
+    _skillsFocus.dispose();
+    _educationFocus.dispose();
+    _documentFocus.dispose();
     super.dispose();
   }
 
@@ -162,29 +173,39 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                     CommonTextField(
                       controller: _nameController,
                       labelText: 'Name',
+                      focusNode: _nameFocus,
+                      nextFocusNode: _contactFocus,
                     ),
                     const SizedBox(height: 16),
                     CommonTextField(
                       controller: _contactController,
                       labelText: 'Contact',
                       keyboardType: TextInputType.phone,
+                      focusNode: _contactFocus,
+                      nextFocusNode: _skillsFocus,
                     ),
                     const SizedBox(height: 16),
                     CommonTextField(
                       controller: _skillsController,
                       labelText: 'Skills',
                       maxLines: 3,
+                      focusNode: _skillsFocus,
+                      nextFocusNode: _educationFocus,
                     ),
                     const SizedBox(height: 16),
                     CommonTextField(
                       controller: _educationController,
                       labelText: 'Education',
                       maxLines: 3,
+                      focusNode: _educationFocus,
+                      nextFocusNode: _documentFocus,
                     ),
                     const SizedBox(height: 16),
                     CommonTextField(
                       controller: _documentController,
                       labelText: 'Verification Document',
+                      focusNode: _documentFocus,
+                      onSubmitted: _saveProfile,
                     ),
                     const SizedBox(height: 12),
                     CommonButton(

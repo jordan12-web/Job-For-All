@@ -4,8 +4,10 @@ import '../models/application.dart';
 import '../models/job.dart';
 import '../services/application_service.dart';
 import '../services/job_service.dart';
+import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/debug_logger.dart';
+import '../utils/role_utils.dart';
 
 /// Detail view for a single job posting, opened from
 /// RecruitmentHubPage's "My Postings" list.
@@ -32,6 +34,7 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
   bool _isPublishing = false;
 
   final Set<String> _updatingIds = <String>{};
+  final Set<String> _shortlistingIds = <String>{};
 
   late Job _job; // mutable local copy so status updates reflect immediately
 
@@ -49,14 +52,15 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
     });
 
     try {
-      // Reuse fetchApplicationsForEmployer and filter client-side to this
-      // job — avoids adding a third Supabase query method when the
-      // employer-scoped one already exists and the dataset per employer
-      // is small for a project of this size.
-      final String employerId = _job.employerId;
-      final List<Application> all =
-          await ApplicationService.instance.fetchApplicationsForEmployer(
-        employerId,
+      final String? employerId = RoleUtils.currentUserId;
+      if (employerId == null || employerId.isEmpty) {
+        throw Exception('Could not identify your account.');
+      }
+
+      final List<Application> apps =
+          await ApplicationService.instance.fetchApplicationsForJob(
+        jobId: _job.id,
+        employerId: employerId,
       );
 
       if (!mounted) {
@@ -64,8 +68,7 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
       }
 
       setState(() {
-        _applications =
-            all.where((Application a) => a.jobId == _job.id).toList();
+        _applications = apps;
         _isLoadingApplicants = false;
       });
     } catch (e) {
@@ -160,6 +163,38 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
         backgroundColor: success
             ? (newStatus == 'accepted' ? Colors.green[700] : Colors.red[700])
             : Colors.grey[800],
+      ),
+    );
+  }
+
+  Future<void> _scheduleInterview(Application app) async {
+    if (_shortlistingIds.contains(app.id)) {
+      return;
+    }
+
+    setState(() => _shortlistingIds.add(app.id));
+
+    final bool success =
+        await NotificationService.instance.scheduleInterview(
+      seekerId: app.seekerId,
+      applicationId: app.id,
+      jobTitle: _job.title,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => _shortlistingIds.remove(app.id));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'Interview notification sent to ${app.seekerName ?? 'applicant'}.'
+              : 'Could not send notification.',
+        ),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -325,6 +360,7 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
     return Column(
       children: _applications.map((Application app) {
         final bool isUpdating = _updatingIds.contains(app.id);
+        final bool isShortlisting = _shortlistingIds.contains(app.id);
         final String name = app.seekerName ?? app.seekerEmail ?? 'Unknown applicant';
 
         return Padding(
@@ -379,8 +415,10 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
                       ),
                     )
                   else if (app.isPending)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
+                    Wrap(
+                      alignment: WrapAlignment.end,
+                      spacing: 10,
+                      runSpacing: 8,
                       children: <Widget>[
                         OutlinedButton.icon(
                           onPressed: () => _updateStatus(app, 'rejected'),
@@ -390,7 +428,22 @@ class _JobPostingDetailPageState extends State<JobPostingDetailPage> {
                             foregroundColor: Colors.red[700],
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        OutlinedButton.icon(
+                          onPressed:
+                              isShortlisting ? null : () => _scheduleInterview(app),
+                          icon: isShortlisting
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.event_outlined, size: 16),
+                          label: Text(
+                            isShortlisting ? 'Sending…' : 'Shortlist / Schedule',
+                          ),
+                        ),
                         FilledButton.icon(
                           onPressed: () => _updateStatus(app, 'accepted'),
                           icon: const Icon(Icons.check, size: 16),

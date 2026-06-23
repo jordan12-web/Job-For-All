@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/mock_profile_store.dart';
@@ -479,64 +480,246 @@ class _AnalyticsSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final bool wide = constraints.maxWidth >= 640;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          'Platform Summary',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final bool wide = constraints.maxWidth >= 640;
 
-        final List<Widget> tiles = <Widget>[
-          _StatTile(
-            label:     'Total Job Seekers',
-            value:     isLoading ? '—' : totalSeekers.toString(),
-            icon:      Icons.people_outline,
-            iconColor: AppColors.sky,
-            bgColor:   AppColors.skyLight,
-            isLoading: isLoading,
-          ),
-          _StatTile(
-            label:     'Pending Reviews',
-            value:     isLoading ? '—' : totalPendingJobs.toString(),
-            icon:      Icons.pending_actions_outlined,
-            iconColor: AppColors.warning,
-            bgColor:   const Color(0xFFFFFBEB),
-            isLoading: isLoading,
-          ),
-          _StatTile(
-            label:     'Total Applications',
-            value:     isLoading ? '—' : totalApplications.toString(),
-            icon:      Icons.assignment_outlined,
-            iconColor: AppColors.success,
-            bgColor:   const Color(0xFFF0FDF4),
-            isLoading: isLoading,
-          ),
-        ];
+            final List<Widget> tiles = <Widget>[
+              _StatTile(
+                label:     'Total Job Seekers',
+                value:     isLoading ? '—' : totalSeekers.toString(),
+                icon:      Icons.people_outline,
+                iconColor: AppColors.sky,
+                bgColor:   AppColors.skyLight,
+                isLoading: isLoading,
+              ),
+              _StatTile(
+                label:     'Pending Reviews',
+                value:     isLoading ? '—' : totalPendingJobs.toString(),
+                icon:      Icons.pending_actions_outlined,
+                iconColor: AppColors.warning,
+                bgColor:   const Color(0xFFFFFBEB),
+                isLoading: isLoading,
+              ),
+              _StatTile(
+                label:     'Total Applications',
+                value:     isLoading ? '—' : totalApplications.toString(),
+                icon:      Icons.assignment_outlined,
+                iconColor: AppColors.success,
+                bgColor:   const Color(0xFFF0FDF4),
+                isLoading: isLoading,
+              ),
+            ];
 
-        if (wide) {
-          return Row(
-            children: tiles
-                .map(
-                  (Widget t) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 16),
+            if (wide) {
+              return Row(
+                children: tiles
+                    .map(
+                      (Widget t) => Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: t,
+                        ),
+                      ),
+                    )
+                    .toList()
+                  ..[tiles.length - 1] = Expanded(child: tiles.last),
+              );
+            }
+
+            return Column(
+              children: tiles
+                  .map(
+                    (Widget t) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
                       child: t,
                     ),
-                  ),
-                )
-                .toList()
-              ..[tiles.length - 1] = Expanded(child: tiles.last),
-          );
-        }
+                  )
+                  .toList(),
+            );
+          },
+        ),
+        const SizedBox(height: 20),
+        _AnalyticsChart(
+          isLoading:         isLoading,
+          totalSeekers:      totalSeekers,
+          totalPendingJobs:  totalPendingJobs,
+          totalApplications: totalApplications,
+        ),
+      ],
+    );
+  }
+}
 
-        return Column(
-          children: tiles
-              .map(
-                (Widget t) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: t,
+class _AnalyticsChart extends StatelessWidget {
+  const _AnalyticsChart({
+    required this.isLoading,
+    required this.totalSeekers,
+    required this.totalPendingJobs,
+    required this.totalApplications,
+  });
+
+  final bool isLoading;
+  final int totalSeekers;
+  final int totalPendingJobs;
+  final int totalApplications;
+
+  @override
+  Widget build(BuildContext context) {
+    final double maxY = <double>[
+      totalSeekers.toDouble(),
+      totalPendingJobs.toDouble(),
+      totalApplications.toDouble(),
+      1,
+    ].reduce((double a, double b) => a > b ? a : b);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color:        AppColors.surfaceWhite,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: AppColors.navy.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Activity Overview',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
                 ),
-              )
-              .toList(),
-        );
-      },
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 180,
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : BarChart(
+                    BarChartData(
+                      maxY: maxY * 1.2,
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        horizontalInterval: maxY > 5 ? (maxY / 4).ceilToDouble() : 1,
+                        getDrawingHorizontalLine: (double _) => FlLine(
+                          color: AppColors.border,
+                          strokeWidth: 1,
+                        ),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      titlesData: FlTitlesData(
+                        topTitles: const AxisTitles(),
+                        rightTitles: const AxisTitles(),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 32,
+                            getTitlesWidget: (double value, TitleMeta meta) {
+                              if (value == meta.max || value == 0) {
+                                return const SizedBox.shrink();
+                              }
+                              return Text(
+                                value.toInt().toString(),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondary,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            getTitlesWidget: (double value, TitleMeta meta) {
+                              const List<String> labels = <String>[
+                                'Seekers',
+                                'Pending',
+                                'Apps',
+                              ];
+                              final int index = value.toInt();
+                              if (index < 0 || index >= labels.length) {
+                                return const SizedBox.shrink();
+                              }
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  labels[index],
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.navy,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      barGroups: <BarChartGroupData>[
+                        BarChartGroupData(
+                          x: 0,
+                          barRods: <BarChartRodData>[
+                            BarChartRodData(
+                              toY: totalSeekers.toDouble(),
+                              color: AppColors.sky,
+                              width: 28,
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(6),
+                              ),
+                            ),
+                          ],
+                        ),
+                        BarChartGroupData(
+                          x: 1,
+                          barRods: <BarChartRodData>[
+                            BarChartRodData(
+                              toY: totalPendingJobs.toDouble(),
+                              color: AppColors.warning,
+                              width: 28,
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(6),
+                              ),
+                            ),
+                          ],
+                        ),
+                        BarChartGroupData(
+                          x: 2,
+                          barRods: <BarChartRodData>[
+                            BarChartRodData(
+                              toY: totalApplications.toDouble(),
+                              color: AppColors.success,
+                              width: 28,
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

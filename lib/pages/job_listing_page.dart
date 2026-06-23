@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-// Mock stores kept for apply dialog — will be replaced in applications sprint
-import '../data/mock_application_store.dart';
+// Mock job types for filter dropdown only
 import '../data/mock_job_store.dart';
 import '../data/mock_profile_store.dart';
 import '../models/job.dart';
+import '../services/application_service.dart';
 import '../services/job_service.dart';
 import '../utils/debug_logger.dart';
 import '../utils/matching_utils.dart';
@@ -122,7 +122,7 @@ class _JobListingPageState extends State<JobListingPage> {
   Future<void> _openApplyDialog(Job job) async {
     final bool? didApply = await showDialog<bool>(
       context: context,
-      builder: (_) => _ApplyJobDialog(job: job.toDisplayMap()),
+      builder: (_) => _ApplyJobDialog(job: job),
     );
 
     if (didApply == true && mounted) {
@@ -413,7 +413,7 @@ class MockCompanyLogo extends StatelessWidget {
 class _ApplyJobDialog extends StatefulWidget {
   const _ApplyJobDialog({required this.job});
 
-  final Map<String, String> job;
+  final Job job;
 
   @override
   State<_ApplyJobDialog> createState() => _ApplyJobDialogState();
@@ -421,6 +421,7 @@ class _ApplyJobDialog extends StatefulWidget {
 
 class _ApplyJobDialogState extends State<_ApplyJobDialog> {
   final TextEditingController _cvController = TextEditingController();
+  final FocusNode _cvFocus = FocusNode();
 
   bool _useSavedProfile = MockProfileStore.jobSeekerProfile.isNotEmpty;
   bool _isSubmitting = false;
@@ -429,6 +430,7 @@ class _ApplyJobDialogState extends State<_ApplyJobDialog> {
   @override
   void dispose() {
     _cvController.dispose();
+    _cvFocus.dispose();
     super.dispose();
   }
 
@@ -463,41 +465,35 @@ class _ApplyJobDialogState extends State<_ApplyJobDialog> {
       _errorMessage = null;
     });
 
-    // Placeholder delay — real DB insert wired in applications sprint
-    await Future<void>.delayed(const Duration(milliseconds: 500));
+    final String cvUrl = _useSavedProfile
+        ? 'profile://${profile['Name'] ?? 'saved'}'
+        : cvReference;
+
+    final ApplyResult result = await ApplicationService.instance.apply(
+      jobId: widget.job.id,
+      cvUrl: cvUrl,
+    );
 
     if (!mounted) {
       return;
     }
 
-    try {
-      MockApplicationStore.addApplication(
-        jobTitle: widget.job['title'] ?? 'Untitled Job',
-        company: widget.job['company'] ?? 'Unknown Company',
-        applicantName: _useSavedProfile
-            ? profile['Name'] ?? 'Saved Profile Applicant'
-            : 'CV Applicant',
-        contact: _useSavedProfile
-            ? profile['Contact'] ?? 'Not provided'
-            : 'Provided in CV',
-        source: _useSavedProfile ? 'Saved profile' : 'Uploaded CV',
-        summary: _useSavedProfile
-            ? 'Skills: ${profile['Skills'] ?? 'Not provided'} | Education: ${profile['Education'] ?? 'Not provided'}'
-            : 'CV reference: $cvReference',
-      );
+    setState(() => _isSubmitting = false);
+
+    if (result.isSuccess) {
       Navigator.pop(context, true);
-    } catch (_) {
-      setState(() {
-        _isSubmitting = false;
-        _errorMessage = 'Application failed. Please try again.';
-      });
+      return;
     }
+
+    setState(() {
+      _errorMessage = result.message ?? 'Application failed. Please try again.';
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final bool hasSavedProfile = MockProfileStore.jobSeekerProfile.isNotEmpty;
-    final String company = widget.job['company'] ?? 'Company';
+    final String company = widget.job.company ?? 'Company';
 
     return AlertDialog(
       title: const Text('Apply for Job'),
@@ -515,7 +511,7 @@ class _ApplyJobDialogState extends State<_ApplyJobDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        widget.job['title'] ?? 'Selected job',
+                        widget.job.title,
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       Text(
@@ -556,7 +552,7 @@ class _ApplyJobDialogState extends State<_ApplyJobDialog> {
                     contentPadding: EdgeInsets.zero,
                     value: false,
                     title: const Text('Upload a CV'),
-                    subtitle: const Text('Mock upload for local storage.'),
+                    subtitle: const Text('Reference filename or link.'),
                   ),
                 ],
               ),
@@ -566,6 +562,8 @@ class _ApplyJobDialogState extends State<_ApplyJobDialog> {
               CommonTextField(
                 controller: _cvController,
                 labelText: 'CV file name or link',
+                focusNode: _cvFocus,
+                onSubmitted: _submitApplication,
               ),
               const SizedBox(height: 12),
               CommonButton(

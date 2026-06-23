@@ -10,37 +10,157 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
-/// "Clinical" design system theme.
+/// Layout and interaction tokens exposed via [ThemeExtension].
+@immutable
+class AppLayoutTokens extends ThemeExtension<AppLayoutTokens> {
+  const AppLayoutTokens({
+    required this.pagePadding,
+    required this.cardPadding,
+    required this.fieldSpacing,
+    required this.sectionSpacing,
+    required this.cardRadius,
+    required this.buttonRadius,
+    required this.cardElevation,
+    required this.cardElevationHovered,
+    required this.transitionDuration,
+  });
+
+  final double pagePadding;
+  final double cardPadding;
+  final double fieldSpacing;
+  final double sectionSpacing;
+  final double cardRadius;
+  final double buttonRadius;
+  final double cardElevation;
+  final double cardElevationHovered;
+  final Duration transitionDuration;
+
+  static const AppLayoutTokens defaults = AppLayoutTokens(
+    pagePadding:           28,
+    cardPadding:           28,
+    fieldSpacing:          20,
+    sectionSpacing:        32,
+    cardRadius:            14,
+    buttonRadius:          10,
+    cardElevation:         1,
+    cardElevationHovered:  6,
+    transitionDuration:    Duration(milliseconds: 120),
+  );
+
+  @override
+  AppLayoutTokens copyWith({
+    double? pagePadding,
+    double? cardPadding,
+    double? fieldSpacing,
+    double? sectionSpacing,
+    double? cardRadius,
+    double? buttonRadius,
+    double? cardElevation,
+    double? cardElevationHovered,
+    Duration? transitionDuration,
+  }) {
+    return AppLayoutTokens(
+      pagePadding:          pagePadding          ?? this.pagePadding,
+      cardPadding:          cardPadding          ?? this.cardPadding,
+      fieldSpacing:       fieldSpacing         ?? this.fieldSpacing,
+      sectionSpacing:     sectionSpacing       ?? this.sectionSpacing,
+      cardRadius:         cardRadius           ?? this.cardRadius,
+      buttonRadius:       buttonRadius         ?? this.buttonRadius,
+      cardElevation:      cardElevation        ?? this.cardElevation,
+      cardElevationHovered:
+          cardElevationHovered ?? this.cardElevationHovered,
+      transitionDuration: transitionDuration   ?? this.transitionDuration,
+    );
+  }
+
+  @override
+  AppLayoutTokens lerp(ThemeExtension<AppLayoutTokens>? other, double t) {
+    if (other is! AppLayoutTokens) {
+      return this;
+    }
+    return AppLayoutTokens(
+      pagePadding:          pagePadding,
+      cardPadding:          cardPadding,
+      fieldSpacing:         fieldSpacing,
+      sectionSpacing:       sectionSpacing,
+      cardRadius:           cardRadius,
+      buttonRadius:         buttonRadius,
+      cardElevation:        cardElevation,
+      cardElevationHovered: cardElevationHovered,
+      transitionDuration:   transitionDuration,
+    );
+  }
+}
+
+/// Fast fade — feels instantaneous without jarring cuts.
+class _FastFadePageTransitionsBuilder extends PageTransitionsBuilder {
+  const _FastFadePageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return FadeTransition(
+      opacity: CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOut,
+      ),
+      child: child,
+    );
+  }
+}
+
+/// "Trust & Professionalism" design system theme.
 ///
-/// Hospital-grade legibility, single accent colour, flat surfaces,
-/// 8px button radius, 12px card radius. No gradients.
+/// Navy Blue structure, Sky Blue accents, breathable spacing,
+/// subtle hover elevation on interactive surfaces.
 abstract final class AppTheme {
+  static AppLayoutTokens layoutOf(BuildContext context) {
+    return Theme.of(context).extension<AppLayoutTokens>() ??
+        AppLayoutTokens.defaults;
+  }
+
   static ThemeData build() {
     const ColorScheme colorScheme = ColorScheme(
       brightness: Brightness.light,
-      primary: AppColors.primary,
+      primary: AppColors.navy,
       onPrimary: Colors.white,
-      secondary: AppColors.tertiary,
+      secondary: AppColors.sky,
       onSecondary: Colors.white,
+      tertiary: AppColors.sky,
+      onTertiary: Colors.white,
       error: AppColors.error,
       onError: Colors.white,
       surface: AppColors.surfaceWhite,
-      onSurface: AppColors.primary,
+      onSurface: AppColors.navy,
     );
+
+    const AppLayoutTokens layout = AppLayoutTokens.defaults;
 
     return ThemeData(
       colorScheme: colorScheme,
       scaffoldBackgroundColor: AppColors.background,
       useMaterial3: true,
+      extensions: const <ThemeExtension<dynamic>>[layout],
 
-      // ── Typography — IBM Plex Sans / IBM Plex Mono ────────
-      // These ship as system-available fonts on most platforms when
-      // referenced by family name; fallbacks ensure legibility even
-      // if the exact font isn't present on the host OS/browser.
-      fontFamily: 'IBM Plex Sans',
-      fontFamilyFallback: const <String>['Segoe UI', 'Roboto', 'Arial'],
+      // ── Typography — Inter with clean fallbacks ───────────
+      fontFamily: 'Inter',
+      fontFamilyFallback: const <String>[
+        'Segoe UI',
+        'Roboto',
+        'Helvetica Neue',
+        'Arial',
+      ],
       textTheme: ThemeData.light().textTheme
-          .apply(bodyColor: AppColors.primary, displayColor: AppColors.primary)
+          .apply(
+            bodyColor: AppColors.navy,
+            displayColor: AppColors.navy,
+            fontFamily: 'Inter',
+          )
           .copyWith(
             displayLarge: const TextStyle(
               fontWeight: FontWeight.w700,
@@ -55,22 +175,18 @@ abstract final class AppTheme {
             headlineSmall: const TextStyle(fontWeight: FontWeight.w600),
             titleLarge: const TextStyle(fontWeight: FontWeight.w600),
             titleMedium: const TextStyle(fontWeight: FontWeight.w600),
-            // Labels use IBM Plex Mono for the "clinical" data-readout feel
             labelLarge: const TextStyle(
-              fontFamily: 'IBM Plex Mono',
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.2,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.1,
             ),
             labelMedium: const TextStyle(
-              fontFamily: 'IBM Plex Mono',
               fontWeight: FontWeight.w500,
-              letterSpacing: 0.2,
+              letterSpacing: 0.1,
               color: AppColors.secondary,
             ),
             labelSmall: const TextStyle(
-              fontFamily: 'IBM Plex Mono',
               fontWeight: FontWeight.w500,
-              letterSpacing: 0.3,
+              letterSpacing: 0.2,
               color: AppColors.secondary,
             ),
             bodyMedium: const TextStyle(color: AppColors.secondary),
@@ -80,36 +196,33 @@ abstract final class AppTheme {
       // ── AppBar ──────────────────────────────────────────
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.surfaceWhite,
-        foregroundColor: AppColors.primary,
+        foregroundColor: AppColors.navy,
         elevation: 0,
         centerTitle: false,
         surfaceTintColor: Colors.transparent,
         shadowColor: Colors.transparent,
         titleTextStyle: TextStyle(
-          fontFamily: 'IBM Plex Sans',
+          fontFamily: 'Inter',
           fontSize: 18,
           fontWeight: FontWeight.w600,
-          color: AppColors.primary,
+          color: AppColors.navy,
         ),
       ),
 
-      // ── Card — 12px radius (lg token) ─────────────────────
+      // ── Card ────────────────────────────────────────────
       cardTheme: CardThemeData(
         color: AppColors.surfaceWhite,
-        elevation: 0,
-        shadowColor: Colors.black.withValues(alpha: 0.04),
+        elevation: layout.cardElevation,
+        shadowColor: AppColors.navy.withValues(alpha: 0.06),
         surfaceTintColor: AppColors.surfaceWhite,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(layout.cardRadius),
           side: const BorderSide(color: AppColors.border),
         ),
         margin: EdgeInsets.zero,
       ),
 
-      // ── FilledButton — 8px radius (md token), tertiary accent ──
-      // Tertiary (#0E9F8E) is the ONLY accent in the system.
-      // Hover = subtle elevation shift, NOT a colour change —
-      // "no color changes or distracting flashes" per spec.
+      // ── FilledButton — Sky Blue accent, hover elevation ─
       filledButtonTheme: FilledButtonThemeData(
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith((
@@ -118,74 +231,91 @@ abstract final class AppTheme {
             if (s.contains(WidgetState.disabled)) {
               return AppColors.textHint;
             }
-            return AppColors.tertiary;
+            return AppColors.sky;
           }),
           foregroundColor: WidgetStateProperty.all(Colors.white),
           overlayColor: WidgetStateProperty.all(
-            Colors.white.withValues(alpha: 0.10),
+            Colors.white.withValues(alpha: 0.12),
           ),
           elevation: WidgetStateProperty.resolveWith((Set<WidgetState> s) {
-            if (s.contains(WidgetState.hovered)) {
-              return 3;
+            if (s.contains(WidgetState.disabled)) {
+              return 0;
             }
-            return 0;
+            if (s.contains(WidgetState.hovered) ||
+                s.contains(WidgetState.pressed)) {
+              return 4;
+            }
+            return 1;
           }),
           shadowColor: WidgetStateProperty.all(
-            AppColors.primary.withValues(alpha: 0.18),
+            AppColors.sky.withValues(alpha: 0.35),
           ),
-          minimumSize: WidgetStateProperty.all(const Size(0, 48)),
+          minimumSize: WidgetStateProperty.all(const Size(0, 50)),
           padding: WidgetStateProperty.all(
-            const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
           ),
           shape: WidgetStateProperty.all(
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(layout.buttonRadius),
+            ),
           ),
           textStyle: WidgetStateProperty.all(
             const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
           ),
-          animationDuration: const Duration(milliseconds: 150),
+          animationDuration: layout.transitionDuration,
         ),
       ),
 
-      // ── OutlinedButton — secondary actions, never the accent ────
+      // ── OutlinedButton ──────────────────────────────────
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: ButtonStyle(
-          foregroundColor: WidgetStateProperty.all(AppColors.primary),
+          foregroundColor: WidgetStateProperty.all(AppColors.navy),
           side: WidgetStateProperty.resolveWith((Set<WidgetState> s) {
             if (s.contains(WidgetState.hovered)) {
-              return const BorderSide(color: AppColors.primary, width: 1.5);
+              return const BorderSide(color: AppColors.sky, width: 1.5);
             }
             return const BorderSide(color: AppColors.border);
           }),
           overlayColor: WidgetStateProperty.all(
-            AppColors.primary.withValues(alpha: 0.04),
+            AppColors.sky.withValues(alpha: 0.06),
           ),
-          minimumSize: WidgetStateProperty.all(const Size(0, 48)),
+          elevation: WidgetStateProperty.resolveWith((Set<WidgetState> s) {
+            if (s.contains(WidgetState.hovered)) {
+              return 2;
+            }
+            return 0;
+          }),
+          minimumSize: WidgetStateProperty.all(const Size(0, 50)),
+          padding: WidgetStateProperty.all(
+            const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+          ),
           shape: WidgetStateProperty.all(
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(layout.buttonRadius),
+            ),
           ),
-          animationDuration: const Duration(milliseconds: 150),
+          animationDuration: layout.transitionDuration,
         ),
       ),
 
-      // ── TextButton ───────────────────────────────────────
+      // ── TextButton ──────────────────────────────────────
       textButtonTheme: TextButtonThemeData(
         style: ButtonStyle(
-          foregroundColor: WidgetStateProperty.all(AppColors.primary),
+          foregroundColor: WidgetStateProperty.all(AppColors.navy),
           overlayColor: WidgetStateProperty.all(
-            AppColors.primary.withValues(alpha: 0.04),
+            AppColors.sky.withValues(alpha: 0.06),
           ),
-          animationDuration: const Duration(milliseconds: 150),
+          animationDuration: layout.transitionDuration,
         ),
       ),
 
-      // ── Input / TextField ────────────────────────────────
+      // ── Input / TextField ───────────────────────────────
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surfaceWhite,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
+          horizontal: 18,
+          vertical: 16,
         ),
         labelStyle: const TextStyle(
           color: AppColors.secondary,
@@ -196,67 +326,67 @@ abstract final class AppTheme {
           fontWeight: FontWeight.w400,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(layout.buttonRadius),
           borderSide: const BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(layout.buttonRadius),
           borderSide: const BorderSide(color: AppColors.border),
         ),
-        // Focus uses the tertiary accent — the one place a non-button
-        // element is allowed to show it, since it signals the single
-        // active input the user is interacting with.
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.tertiary, width: 2),
+          borderRadius: BorderRadius.circular(layout.buttonRadius),
+          borderSide: const BorderSide(color: AppColors.sky, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(layout.buttonRadius),
           borderSide: const BorderSide(color: AppColors.error),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(layout.buttonRadius),
           borderSide: const BorderSide(color: AppColors.error, width: 2),
         ),
       ),
 
-      // ── Chip — flat, secondary-coloured metadata tag ──────
+      // ── Chip ────────────────────────────────────────────
       chipTheme: ChipThemeData(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.navyLight,
         labelStyle: const TextStyle(
-          fontFamily: 'IBM Plex Mono',
           color: AppColors.secondary,
           fontWeight: FontWeight.w500,
           fontSize: 12,
         ),
         side: const BorderSide(color: AppColors.border),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       ),
 
-      // ── Divider ──────────────────────────────────────────
+      // ── Divider ─────────────────────────────────────────
       dividerTheme: const DividerThemeData(
         color: AppColors.border,
         thickness: 1,
         space: 1,
       ),
 
-      // ── SnackBar ─────────────────────────────────────────
+      // ── SnackBar ────────────────────────────────────────
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.navy,
         contentTextStyle: const TextStyle(color: Colors.white),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(layout.buttonRadius),
+        ),
       ),
 
-      // ── Page transitions — instant, clinical feel ─────────
+      // ── Page transitions — fast fade for lightweight feel ─
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: <TargetPlatform, PageTransitionsBuilder>{
-          TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
-          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
-          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+          TargetPlatform.android:  _FastFadePageTransitionsBuilder(),
+          TargetPlatform.iOS:      _FastFadePageTransitionsBuilder(),
+          TargetPlatform.linux:    _FastFadePageTransitionsBuilder(),
+          TargetPlatform.macOS:    _FastFadePageTransitionsBuilder(),
+          TargetPlatform.windows:  _FastFadePageTransitionsBuilder(),
         },
       ),
     );
